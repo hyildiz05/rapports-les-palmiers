@@ -8,9 +8,27 @@ from io import BytesIO
 from PIL import Image
 from fpdf import FPDF
 
-# Fichier de base de données (CSV)
+# Configuration des fichiers
 DB_FILE = "rapports_les_palmiers.csv"
 LOGO_FILE = "logo.png"
+
+# ==========================================
+# CONFIGURATION DE L'APPLICATION ET DE L'ICÔNE
+# ==========================================
+# On charge l'image personnalisée si elle existe, sinon on met un emoji par défaut
+if os.path.exists(LOGO_FILE):
+    try:
+        app_icon = Image.open(LOGO_FILE)
+    except:
+        app_icon = "📝"
+else:
+    app_icon = "📝"
+
+st.set_page_config(
+    page_title="Les Palmiers - Rapports", 
+    page_icon=app_icon, 
+    layout="centered"
+)
 
 # Fonction intelligente : Gère les ajouts de rapports ET les modifications de doublons
 def sauvegarder_rapport(donnees):
@@ -237,10 +255,7 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
     
     return pdf.output(dest='S').encode('latin-1')
 
-# --- CONFIGURATION STREAMLIT ---
-icon_param = LOGO_FILE if os.path.exists(LOGO_FILE) else "📝"
-st.set_page_config(page_title="Les Palmiers - Rapports", page_icon=icon_param, layout="centered")
-
+# --- INITIALISATION DE L'INTERFACE ---
 st.title("Les Palmiers Boutique Hotel & Spa")
 st.markdown("---")
 
@@ -537,7 +552,7 @@ elif page == "📋 Consulter les Rapports":
                 st.success(f"### 📄 Fiche trouvée : {date_fr} — Shift {shift_choisi}")
                 row = rapport_selectionne.iloc[0]
                 
-                # Génération dynamique et sécurisée du PDF
+                # Génération dynamique du PDF
                 pdf_data = generer_pdf(row, date_fr, shift_choisi, espaces)
                 
                 st.download_button(
@@ -604,9 +619,6 @@ elif page == "📋 Consulter les Rapports":
                 else:
                     st.write("✓ Aucune réclamation.")
 
-                # =========================================================================
-                # CORRECTION : AJOUT DES SECTIONS MANQUANTES SUR L'INTERFACE STREAMLIT
-                # =========================================================================
                 st.markdown("---")
                 titre_prio_interface = "📌 Priorités pour le Shift Soir" if shift_choisi == "MATIN" else "📌 Priorités pour la Nuit"
                 st.subheader(titre_prio_interface)
