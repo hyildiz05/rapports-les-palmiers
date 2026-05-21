@@ -295,7 +295,7 @@ if page == "✍️ Saisir un Rapport":
             vip = st.number_input("Chambres VIP", min_value=0, value=0, key="m_vip_input")
             incidents = st.number_input("Incidents techniques", min_value=0, value=0, key="m_inc_input")
             
-        st.markdown("#### 🏊‍♂️ Réservations Piscine (Provenance)")
+        st.markdown("#### Réservations Piscine (Provenance)")
         cp1, cp2, cp3 = st.columns(3)
         with cp1:
             m_piscine_eat = st.number_input("Eatnow", min_value=0, value=0, key="m_p_eat")
@@ -434,7 +434,7 @@ if page == "✍️ Saisir un Rapport":
             s_vip = st.number_input("Chambres VIP", min_value=0, value=0, key="s_vip")
             s_incidents = st.number_input("Incidents techniques", min_value=0, value=0, key="s_inc")
             
-        st.markdown("####  Réservations Piscine (Provenance)")
+        st.markdown("#### Réservations Piscine (Provenance)")
         cps1, cps2, cps3 = st.columns(3)
         with cps1:
             s_piscine_eat = st.number_input("Eatnow", min_value=0, value=0, key="s_p_eat")
@@ -611,7 +611,7 @@ elif page == "📋 Consulter les Rapports":
                     c5.metric("Incidents Tech.", int(row.get('Incidents_Techniques', 0)))
                 
                 # Affichage des statistiques de provenance de la Piscine
-                st.markdown(f"#### 🏊‍♂️ Détail des réservations Piscine (Total : {total_piscine})")
+                st.markdown(f"#### Détail des réservations Piscine (Total : {total_piscine})")
                 cp_aff1, cp_aff2, cp_aff3 = st.columns(3)
                 cp_aff1.metric("Eatnow", p_eat)
                 cp_aff2.metric("Mysonbed", p_bed)
