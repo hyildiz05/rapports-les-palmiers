@@ -16,13 +16,11 @@ def sauvegarder_rapport(donnees):
         try:
             df = pd.read_csv(DB_FILE)
             
-            # Vérification : existe-t-il déjà un rapport pour cette date et ce shift ?
             if not df.empty and 'Date' in df.columns and 'Shift' in df.columns:
                 doublon_index = df[(df['Date'] == donnees['Date']) & (df['Shift'] == donnees['Shift'])].index
                 if not doublon_index.empty:
                     df = df.drop(doublon_index)
             
-            # Fusion propre des lignes
             df = pd.concat([df, nouveau_df], ignore_index=True, sort=False)
         except Exception:
             df = nouveau_df
@@ -31,13 +29,13 @@ def sauvegarder_rapport(donnees):
         
     df.to_csv(DB_FILE, index=False, encoding='utf-8-sig')
 
-# Fonction pour nettoyer les textes (remplace les "nan" par du vide ou "Aucune")
+# Fonction pour nettoyer les textes (supprime les "nan")
 def clean_txt(valeur):
     if pd.isna(valeur) or str(valeur).strip().lower() == "nan" or str(valeur).strip() == "":
         return ""
     return str(valeur).encode('latin-1', 'replace').decode('latin-1')
 
-# Fonction pour décoder proprement le JSON stocké dans le CSV
+# Fonction pour décoder le JSON du CSV
 def safe_load_json(valeur):
     if pd.isna(valeur) or str(valeur).strip() == "" or str(valeur).strip().lower() == "nan":
         return []
@@ -187,40 +185,35 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
         
     return pdf.output()
 
-# --- CONFIGURATION DE PAGE CORRIGÉE ---
+# --- CONFIGURATION DE PAGE ---
 st.set_page_config(
-    page_title="Les Palmiers - Rapports", 
+    page_title="Les Palmiers", 
     page_icon="logo.png", 
     layout="centered"
 )
 
-# CSS STRICT pour masquer le header, le bouton Fork, l'icône GitHub et le footer de Streamlit
-masquer_interface_total = """
+# NETTOYAGE STRICT INTERFACE : Supprime le footer "Hosted with Streamlit", le header et le menu d'options
+masquer_elements_streamlit = """
             <style>
-            #MainMenu {visibility: hidden;}
-            footer {visibility: hidden;}
-            header {visibility: hidden;}
+            #MainMenu {visibility: hidden !important;}
+            footer {visibility: hidden !important;}
+            header {visibility: hidden !important;}
             .stAppHeader {display: none !important;}
-            [data-testid="stDecoration"] {display: none;}
+            [data-testid="stDecoration"] {display: none !important;}
             [data-testid="stHeader"] {display: none !important;}
+            footer a {display: none !important;}
+            div.styles_viewerBadge__R_C1q {display: none !important;}
             </style>
             """
-st.markdown(masquer_interface_total, unsafe_allow_html=True)
+st.markdown(masquer_elements_streamlit, unsafe_allow_html=True)
 
-# --- INCLUSION DU LOGO SUR LA PAGE ---
-if os.path.exists("logo.png"):
-    # Centre l'image au milieu de la page
-    col_logo_1, col_logo_2, col_logo_3 = st.columns([1, 2, 1])
-    with col_logo_2:
-        st.image("logo.png", use_container_width=True)
-else:
-    st.title("Les Palmiers Boutique Hotel & Spa")
-
+# Titre textuel classique sans l'image au milieu
+st.title("Les Palmiers Boutique Hotel & Spa")
 st.markdown("---")
 
 page = st.sidebar.radio("Navigation", ["✍️ Saisir un Rapport", "📋 Consulter les Rapports"])
 
-# Initialisation persistante du Session State
+# Initialisation du Session State
 if 'reclamations_matin' not in st.session_state:
     st.session_state.reclamations_matin = []
 if 'reclamations_soir' not in st.session_state:
@@ -240,7 +233,6 @@ espaces = [
 # ==========================================
 if page == "✍️ Saisir un Rapport":
     shift = st.sidebar.radio("Sélectionnez le Shift", ["☀️ Shift MATIN", "🌙 Shift SOIR"])
-    
     date_selectionnee = st.sidebar.date_input("📅 Date du Rapport", value=datetime.now().date())
     date_rapport_str = date_selectionnee.strftime("%Y-%m-%d")
 
@@ -258,8 +250,6 @@ if page == "✍️ Saisir un Rapport":
 
         st.markdown("---")
         st.subheader("SUIVI DES ESPACES")
-        relative_style = """<style>div[data-testid="stBlock"] { padding-bottom: 0px !important; }</style>"""
-        st.markdown(relative_style, unsafe_allow_html=True)
         
         sig_matin = {}
         for espace in espaces:
@@ -339,7 +329,7 @@ if page == "✍️ Saisir un Rapport":
             }
             donnees_rapport.update(sig_matin)
             sauvegarder_rapport(donnees_rapport)
-            st.success("🎉 Le rapport du matin a été enregistré / mis à jour avec succès !")
+            st.success("🎉 Le rapport du matin a été enregistré avec succès !")
             
             st.session_state.reclamations_matin = []
             st.session_state.priorites_matin = []
@@ -359,8 +349,6 @@ if page == "✍️ Saisir un Rapport":
                     if prio_m_aff:
                         for idx, p in enumerate(prio_m_aff, 1):
                             st.write(f"   {idx}. {p}")
-                    else:
-                        st.write("• Aucune priorité transmise.")
             except:
                 pass
         
@@ -454,14 +442,14 @@ if page == "✍️ Saisir un Rapport":
             }
             donnees_soir.update(sig_soir)
             sauvegarder_rapport(donnees_soir)
-            st.success("🎉 Le rapport du soir a été enregistré / mis à jour avec succès !")
+            st.success("🎉 Le rapport du soir a été enregistré avec succès !")
             
             st.session_state.reclamations_soir = []
             st.session_state.priorites_soir = []
             st.rerun()
 
 # ==========================================
-# PAGE 2 : CONSULTATION ET TÉLÉCHARGEMENT PDF
+# PAGE 2 : CONSULTATION
 # ==========================================
 elif page == "📋 Consulter les Rapports":
     st.header("📋 Liste des Rapports Enregistrés")
@@ -472,10 +460,9 @@ elif page == "📋 Consulter les Rapports":
         df_consult = pd.read_csv(DB_FILE)
         
         if df_consult.empty:
-            st.info("ℹ️ Aucun rapport trouvé dans la base de données.")
+            st.info("ℹ️ Aucun rapport trouvé.")
         else:
             date_aujourdhui_dt = datetime.now().date()
-            
             c_date, c_shift = st.columns(2)
             with c_date:
                 date_selectionnee_dt = st.date_input("📅 Choisir la Date", value=date_aujourdhui_dt)
@@ -529,8 +516,6 @@ elif page == "📋 Consulter les Rapports":
                     if liste_prio and len(liste_prio) > 0:
                         for idx, p in enumerate(liste_prio, 1):
                             st.write(f"**{idx}.** {p}")
-                    else:
-                        st.write("✓ Aucune priorité spécifique enregistrée.")
                     
                     st.subheader("📝 Notes du Manager")
                     notes = row.get('Notes_Manager', '')
