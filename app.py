@@ -235,10 +235,9 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
     pdf.cell(120, 6, "", ln=False)
     pdf.cell(45, 6, clean_txt("Signature :"), ln=True, align="L")
     
-    # Sortie sécurisée : encode en latin-1 pour s'assurer que les bytes soient purs et lisibles par Streamlit
     return pdf.output(dest='S').encode('latin-1')
 
-# --- RESTE DE LA CONFIGURATION STREAMLIT ---
+# --- CONFIGURATION STREAMLIT ---
 icon_param = LOGO_FILE if os.path.exists(LOGO_FILE) else "📝"
 st.set_page_config(page_title="Les Palmiers - Rapports", page_icon=icon_param, layout="centered")
 
@@ -313,9 +312,7 @@ if page == "✍️ Saisir un Rapport":
             rm_chambre = rc2.text_input("Chambre / Client", placeholder="Ch 2")
             rm_sujet = rc3.text_input("Sujet", placeholder="Problème Wi-Fi")
             rm_action = rc4.text_input("Action prise", placeholder="Répéteur relancé")
-            
             rm_photo = st.file_uploader("📷 Ajouter une photo d'illustration (Optionnel)", type=["jpg", "jpeg", "png"], key="photo_rec_m")
-            
             submit_rec_m = st.form_submit_button("➕ Ajouter la réclamation (Matin)", use_container_width=True)
             
             if submit_rec_m:
@@ -441,9 +438,7 @@ if page == "✍️ Saisir un Rapport":
             r_chambre = rc2.text_input("Chambre / Client", placeholder="Ch 1")
             r_sujet = rc3.text_input("Sujet", placeholder="Pas d'eau chaude")
             r_action = rc4.text_input("Action prise", placeholder="Technicien envoyé")
-            
             rs_photo = st.file_uploader("📷 Ajouter une photo d'illustration (Optionnel)", type=["jpg", "jpeg", "png"], key="photo_rec_s")
-            
             submit_rec_s = st.form_submit_button("➕ Ajouter la réclamation (Soir)", use_container_width=True)
             
             if submit_rec_s:
@@ -510,108 +505,122 @@ if page == "✍️ Saisir un Rapport":
             st.rerun()
 
 # ==========================================
-# PAGE 2 : CONSULTATION ET TÉLÉCHARGEMENT PDF
+# PAGE 2 : CONSULTATION ET FILTRAGE AMÉLIORÉ
 # ==========================================
 elif page == "📋 Consulter les Rapports":
-    st.header("📋 Liste des Rapports Enregistrés")
+    st.header("📋 Consultation des Rapports")
+    
+    c_date, c_shift = st.columns(2)
+    with c_date:
+        date_selectionnee_dt = st.date_input("📅 Choisir la Date", value=datetime.now().date())
+        date_choisie = date_selectionnee_dt.strftime("%Y-%m-%d")
+        date_fr = date_selectionnee_dt.strftime("%d/%m/%Y")
+    
+    with c_shift:
+        shift_choisi = st.selectbox("⏰ Choisir le Shift", ["MATIN", "SOIR"])
+        
+    st.markdown("---")
     
     if not os.path.exists(DB_FILE):
-        st.info("ℹ️ Aucun rapport n'a été enregistré pour le moment.")
+        st.info("ℹ️ Aucun rapport n'a encore été créé dans l'application.")
     else:
         df_consult = pd.read_csv(DB_FILE)
         
         if df_consult.empty:
-            st.info("ℹ️ Aucun rapport trouvé dans la base de données.")
+            st.info("ℹ️ La base de données est vide pour le moment.")
         else:
-            date_aujourdhui_dt = datetime.now().date()
+            rapport_selectionne = df_consult[(df_consult['Date'] == date_choisie) & (df_consult['Shift'] == shift_choisi)]
             
-            c_date, c_shift = st.columns(2)
-            with c_date:
-                date_selectionnee_dt = st.date_input("📅 Choisir la Date", value=date_aujourdhui_dt)
-                date_choisie = date_selectionnee_dt.strftime("%Y-%m-%d")
-                date_fr = date_selectionnee_dt.strftime("%d/%m/%Y")
-            
-            with c_shift:
-                shifts_dispo = df_consult[df_consult['Date'] == date_choisie]['Shift'].unique() if 'Date' in df_consult.columns else []
-                if len(shifts_dispo) > 0:
-                    shift_choisi = st.selectbox("⏰ Choisir le Shift", shifts_dispo)
-                else:
-                    shift_choisi = None
-            
-            if shift_choisi is None:
-                st.warning(f"⚠️ Aucun rapport n'a été enregistré à la date du {date_fr}.")
+            if rapport_selectionne.empty:
+                st.warning(f"⚠️ Aucun rapport n'a été enregistré pour le **{date_fr}** lors du shift **{shift_choisi}**.")
             else:
-                rapport_selectionne = df_consult[(df_consult['Date'] == date_choisie) & (df_consult['Shift'] == shift_choisi)]
+                st.success(f"### 📄 Fiche trouvée : {date_fr} — Shift {shift_choisi}")
+                row = rapport_selectionne.iloc[0]
                 
-                if not rapport_selectionne.empty:
-                    st.markdown("---")
-                    st.success(f"### 📄 Aperçu de la fiche du {date_fr} — Shift {shift_choisi}")
-                    
-                    row = rapport_selectionne.iloc[0]
-                    
-                    # Récupération propre du flux binaire
-                    pdf_data = generer_pdf(row, date_fr, shift_choisi, espaces)
-                    
-                    st.download_button(
-                        label="📥 Télécharger le Rapport PDF (Format Officiel Papier)",
-                        data=pdf_data,
-                        file_name=f"Rapport_{shift_choisi}_{date_choisie}.pdf",
-                        mime="application/pdf",
-                        use_container_width=True
-                    )
-                    
-                    st.markdown("---")
-                    st.subheader("📊 Résumé des Opérations")
-                    if shift_choisi == "MATIN":
-                        c1, c2, c3, c4, c5 = st.columns(5)
-                        c1.metric("Chambres Occ.", int(row.get('Chambres_Occupees', 0)))
-                        c2.metric("Chambres VIP", int(row.get('VIP', 0)))
-                        c3.metric("Arrivées Prév.", int(row.get('Arrivees_Prevues', 0)))
-                        c4.metric("Départs Prév.", int(row.get('Departs_Prevus', 0)))
-                        c5.metric("Incidents Tech.", int(row.get('Incidents_Techniques', 0)))
-                    elif shift_choisi == "SOIR":
-                        c1, c2, c3, c4, c5 = st.columns(5)
-                        c1.metric("Chambres Occ.", int(row.get('Chambres_Occupees', 0)))
-                        c2.metric("Chambres VIP", int(row.get('VIP', 0)))
-                        c3.metric("Late Check-in", int(row.get('Late_Check_In', 0)))
-                        c4.metric("Départs Tard.", int(row.get('Departs_Tardifs', 0)))
-                        c5.metric("Incidents Tech.", int(row.get('Incidents_Techniques', 0)))
-                    
-                    st.subheader("🔍 Suivi de l'état des espaces")
-                    espaces_data = []
+                # Génération dynamique et sécurisée du PDF
+                pdf_data = generer_pdf(row, date_fr, shift_choisi, espaces)
+                
+                st.download_button(
+                    label="📥 Télécharger le Rapport PDF (Format Papier)",
+                    data=pdf_data,
+                    file_name=f"Rapport_{shift_choisi}_{date_choisie}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True
+                )
+                
+                st.markdown("---")
+                st.subheader("📊 Résumé des Opérations")
+                if shift_choisi == "MATIN":
+                    c1, c2, c3, c4, c5 = st.columns(5)
+                    c1.metric("Chambres Occ.", int(row.get('Chambres_Occupees', 0)))
+                    c2.metric("Chambres VIP", int(row.get('VIP', 0)))
+                    c3.metric("Arrivées Prév.", int(row.get('Arrivees_Prevues', 0)))
+                    c4.metric("Départs Prév.", int(row.get('Departs_Prevus', 0)))
+                    c5.metric("Incidents Tech.", int(row.get('Incidents_Techniques', 0)))
+                elif shift_choisi == "SOIR":
+                    c1, c2, c3, c4, c5 = st.columns(5)
+                    c1.metric("Chambres Occ.", int(row.get('Chambres_Occupees', 0)))
+                    c2.metric("Chambres VIP", int(row.get('VIP', 0)))
+                    c3.metric("Late Check-in", int(row.get('Late_Check_In', 0)))
+                    c4.metric("Départs Tard.", int(row.get('Departs_Tardifs', 0)))
+                    c5.metric("Incidents Tech.", int(row.get('Incidents_Techniques', 0)))
+                
+                st.subheader("🔍 Suivi de l'état des espaces")
+                espaces_data = []
+                for esp in espaces:
+                    has_photo_esp = f"{esp}_Photo" in row and not pd.isna(row.get(f"{esp}_Photo")) and str(row.get(f"{esp}_Photo")).strip() != ""
+                    espaces_data.append({
+                        "Espace": esp,
+                        "État": row.get(f"{esp}_Etat", "N/A"),
+                        "Observations": "Aucune" if pd.isna(row.get(f"{esp}_Observations")) or str(row.get(f"{esp}_Observations")).strip().lower() == "nan" or str(row.get(f"{esp}_Observations")).strip() == "" else row.get(f"{esp}_Observations"),
+                        "Intervention": "Aucune" if pd.isna(row.get(f"{esp}_Intervention")) or str(row.get(f"{esp}_Intervention")).strip().lower() == "nan" or str(row.get(f"{esp}_Intervention")).strip() == "" else row.get(f"{esp}_Intervention"),
+                        "Photo": "📸 Oui" if has_photo_esp else "Non"
+                    })
+                st.table(pd.DataFrame(espaces_data))
+                
+                with st.expander("🖼️ Visualiser les photos des espaces communs"):
+                    photo_trouvee = False
                     for esp in espaces:
-                        has_photo_esp = f"{esp}_Photo" in row and not pd.isna(row.get(f"{esp}_Photo")) and str(row.get(f"{esp}_Photo")).strip() != ""
-                        espaces_data.append({
-                            "Espace": esp,
-                            "État": row.get(f"{esp}_Etat", "N/A"),
-                            "Observations": "Aucune" if pd.isna(row.get(f"{esp}_Observations")) or str(row.get(f"{esp}_Observations")).strip().lower() == "nan" or str(row.get(f"{esp}_Observations")).strip() == "" else row.get(f"{esp}_Observations"),
-                            "Intervention": "Aucune" if pd.isna(row.get(f"{esp}_Intervention")) or str(row.get(f"{esp}_Intervention")).strip().lower() == "nan" or str(row.get(f"{esp}_Intervention")).strip() == "" else row.get(f"{esp}_Intervention"),
-                            "Photo": "📸 Oui" if has_photo_esp else "Non"
-                        })
-                    st.table(pd.DataFrame(espaces_data))
-                    
-                    with st.expander("🖼️ Visualiser les photos des espaces communs"):
-                        photo_trouvee = False
-                        for esp in espaces:
-                            img_b64 = row.get(f"{esp}_Photo")
-                            if not pd.isna(img_b64) and str(img_b64).strip() != "":
-                                photo_trouvee = True
-                                try:
-                                    st.write(f"**Espace : {esp} ({row.get(f'{esp}_Etat')})**")
-                                    img_data = base64.b64decode(img_b64)
-                                    image = Image.open(BytesIO(img_data))
-                                    st.image(image, width=400)
-                                except:
-                                    st.error(f"Erreur d'affichage : {esp}")
-                        if not photo_trouvee:
-                            st.write("Aucune photo disponible pour les espaces.")
-                    
-                    st.subheader("🚨 Réclamations Clients")
-                    liste_rec = safe_load_json(row.get('Reclamations_Detail', '[]'))
-                    if liste_rec and len(liste_rec) > 0:
-                        df_table_rec = pd.DataFrame(liste_rec)
-                        if "Photo" in df_table_rec.columns:
-                            df_table_rec["Photo"] = df_table_rec["Photo"].apply(lambda x: "📸 Oui" if x else "Non")
-                        st.table(df_table_rec)
-                    else:
-                        st.write("✓ Aucune réclamation.")
+                        img_b64 = row.get(f"{esp}_Photo")
+                        if not pd.isna(img_b64) and str(img_b64).strip() != "":
+                            photo_trouvee = True
+                            try:
+                                st.write(f"**Espace : {esp} ({row.get(f'{esp}_Etat')})**")
+                                img_data = base64.b64decode(img_b64)
+                                image = Image.open(BytesIO(img_data))
+                                st.image(image, width=400)
+                            except:
+                                st.error(f"Erreur d'affichage : {esp}")
+                    if not photo_trouvee:
+                        st.write("Aucune photo disponible pour les espaces.")
+                
+                st.subheader("🚨 Réclamations Clients")
+                liste_rec = safe_load_json(row.get('Reclamations_Detail', '[]'))
+                if liste_rec and len(liste_rec) > 0:
+                    df_table_rec = pd.DataFrame(liste_rec)
+                    if "Photo" in df_table_rec.columns:
+                        df_table_rec["Photo"] = df_table_rec["Photo"].apply(lambda x: "📸 Oui" if x else "Non")
+                    st.table(df_table_rec)
+                else:
+                    st.write("✓ Aucune réclamation.")
+
+                # =========================================================================
+                # CORRECTION : AJOUT DES SECTIONS MANQUANTES SUR L'INTERFACE STREAMLIT
+                # =========================================================================
+                st.markdown("---")
+                titre_prio_interface = "📌 Priorités pour le Shift Soir" if shift_choisi == "MATIN" else "📌 Priorités pour la Nuit"
+                st.subheader(titre_prio_interface)
+                liste_prio = safe_load_json(row.get('Priorites_Liste', '[]'))
+                if liste_prio and len(liste_prio) > 0:
+                    for idx, p in enumerate(liste_prio, 1):
+                        st.write(f"**{idx}.** {p}")
+                else:
+                    st.write("_Aucune priorité enregistrée._")
+                
+                st.markdown("---")
+                st.subheader("📝 Notes du Manager")
+                notes = row.get('Notes_Manager', 'Aucune')
+                if pd.isna(notes) or str(notes).strip() == "" or str(notes).strip().lower() == "nan" or str(notes).strip() == "Aucune":
+                    st.write("_Aucune note générale rédigée pour ce shift._")
+                else:
+                    st.info(notes)
