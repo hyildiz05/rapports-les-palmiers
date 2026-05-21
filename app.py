@@ -187,10 +187,10 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
         
     return pdf.output()
 
-# Configuration Streamlit (avec intégration de votre logo en icône de page)
+# --- CONFIGURATION DE PAGE CORRIGÉE AVEC LOGO.PNG ---
 st.set_page_config(
     page_title="Les Palmiers - Rapports", 
-    page_icon="lespalmiers.jpg", 
+    page_icon="logo.png", 
     layout="centered"
 )
 
@@ -529,4 +529,26 @@ elif page == "📋 Consulter les Rapports":
                     else:
                         st.info(notes)
                         
-                    with st
+                    with st.expander("🔍 Voir le détail de l'état des espaces"):
+                        espaces_data = []
+                        for esp in espaces:
+                            espaces_data.append({
+                                "Espace": esp,
+                                "État": row.get(f"{esp}_Etat", "N/A"),
+                                "Observations": "Aucune" if pd.isna(row.get(f"{esp}_Observations")) or str(row.get(f"{esp}_Observations")).strip().lower() == "nan" or str(row.get(f"{esp}_Observations")).strip() == "" else row.get(f"{esp}_Observations"),
+                                "Intervention": "Aucune" if pd.isna(row.get(f"{esp}_Intervention")) or str(row.get(f"{esp}_Intervention")).strip().lower() == "nan" or str(row.get(f"{esp}_Intervention")).strip() == "" else row.get(f"{esp}_Intervention")
+                            })
+                        st.table(pd.DataFrame(espaces_data))
+                    
+                    st.markdown("---")
+                    
+                    pdf_data_raw = generer_pdf(row, date_fr, shift_choisi, espaces)
+                    pdf_data = bytes(pdf_data_raw) 
+                    
+                    st.download_button(
+                        label="📥 Télécharger le Rapport en PDF",
+                        data=pdf_data,
+                        file_name=f"Rapport_{shift_choisi}_{date_choisie}.pdf",
+                        mime="application/pdf",
+                        use_container_width=True
+                    )
