@@ -136,13 +136,14 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
     pdf.cell(110, 6, clean_txt("Chambres VIP"), border=1)
     pdf.cell(55, 6, clean_txt(str(int(row.get('VIP', 0)))), border=1, ln=True, align="C")
     
-    # Ajout de la provenance des réservations Piscine dans le PDF
+    # Ajout de la provenance des réservations Piscine (avec Marrakech For You)
     p_eat = int(row.get('Piscine_Eatnow', 0))
     p_bed = int(row.get('Piscine_Mysonbed', 0))
+    p_mfy = int(row.get('Piscine_MarrakechForYou', 0))
     p_dir = int(row.get('Piscine_Direct', 0))
-    p_tot = p_eat + p_bed + p_dir
+    p_tot = p_eat + p_bed + p_mfy + p_dir
     
-    pdf.cell(110, 6, clean_txt(f"Réservations Piscine (Total : {p_tot}) | Eatnow:{p_eat} - MySonBed:{p_bed} - Direct:{p_dir}"), border=1)
+    pdf.cell(110, 6, clean_txt(f"Réservations Piscine (Total : {p_tot}) | Eatnow:{p_eat} - MySonBed:{p_bed} - MFY:{p_mfy} - Direct:{p_dir}"), border=1)
     pdf.cell(55, 6, clean_txt(str(p_tot)), border=1, ln=True, align="C")
     
     liste_rec = safe_load_json(row.get('Reclamations_Detail', '[]'))
@@ -296,12 +297,14 @@ if page == "✍️ Saisir un Rapport":
             incidents = st.number_input("Incidents techniques", min_value=0, value=0, key="m_inc_input")
             
         st.markdown("#### Réservations Piscine (Provenance)")
-        cp1, cp2, cp3 = st.columns(3)
+        cp1, cp2, cp3, cp4 = st.columns(4)
         with cp1:
             m_piscine_eat = st.number_input("Eatnow", min_value=0, value=0, key="m_p_eat")
         with cp2:
             m_piscine_bed = st.number_input("Mysonbed", min_value=0, value=0, key="m_p_bed")
         with cp3:
+            m_piscine_mfy = st.number_input("Marrakech For You", min_value=0, value=0, key="m_p_mfy")
+        with cp4:
             m_piscine_dir = st.number_input("Direct (Tél / Accueil)", min_value=0, value=0, key="m_p_dir")
 
         st.markdown("---")
@@ -391,6 +394,7 @@ if page == "✍️ Saisir un Rapport":
                 "Incidents_Techniques": incidents,
                 "Piscine_Eatnow": m_piscine_eat,
                 "Piscine_Mysonbed": m_piscine_bed,
+                "Piscine_MarrakechForYou": m_piscine_mfy,
                 "Piscine_Direct": m_piscine_dir,
                 "Priorites_Liste": json.dumps(st.session_state.priorites_matin),
                 "Notes_Manager": notes_manager_matin if notes_manager_matin.strip() != "" else "Aucune",
@@ -435,12 +439,14 @@ if page == "✍️ Saisir un Rapport":
             s_incidents = st.number_input("Incidents techniques", min_value=0, value=0, key="s_inc")
             
         st.markdown("#### Réservations Piscine (Provenance)")
-        cps1, cps2, cps3 = st.columns(3)
+        cps1, cps2, cps3, cps4 = st.columns(4)
         with cps1:
             s_piscine_eat = st.number_input("Eatnow", min_value=0, value=0, key="s_p_eat")
         with cps2:
             s_piscine_bed = st.number_input("Mysonbed", min_value=0, value=0, key="s_p_bed")
         with cps3:
+            s_piscine_mfy = st.number_input("Marrakech For You", min_value=0, value=0, key="s_p_mfy")
+        with cps4:
             s_piscine_dir = st.number_input("Direct (Tél / Accueil)", min_value=0, value=0, key="s_p_dir")
 
         st.markdown("---")
@@ -529,6 +535,7 @@ if page == "✍️ Saisir un Rapport":
                 "Incidents_Techniques": s_incidents,
                 "Piscine_Eatnow": s_piscine_eat,
                 "Piscine_Mysonbed": s_piscine_bed,
+                "Piscine_MarrakechForYou": s_piscine_mfy,
                 "Piscine_Direct": s_piscine_dir,
                 "Priorites_Liste": json.dumps(st.session_state.priorites_soir),
                 "Notes_Manager": notes_manager_soir if notes_manager_soir.strip() != "" else "Aucune",
@@ -592,8 +599,9 @@ elif page == "📋 Consulter les Rapports":
                 # Calcul des stats piscine pour la consultation
                 p_eat = int(row.get('Piscine_Eatnow', 0))
                 p_bed = int(row.get('Piscine_Mysonbed', 0))
+                p_mfy = int(row.get('Piscine_MarrakechForYou', 0))
                 p_dir = int(row.get('Piscine_Direct', 0))
-                total_piscine = p_eat + p_bed + p_dir
+                total_piscine = p_eat + p_bed + p_mfy + p_dir
                 
                 if shift_choisi == "MATIN":
                     c1, c2, c3, c4, c5 = st.columns(5)
@@ -610,12 +618,13 @@ elif page == "📋 Consulter les Rapports":
                     c4.metric("Départs Tard.", int(row.get('Departs_Tardifs', 0)))
                     c5.metric("Incidents Tech.", int(row.get('Incidents_Techniques', 0)))
                 
-                # Affichage des statistiques de provenance de la Piscine
+                # Affichage des statistiques de provenance de la Piscine (4 colonnes)
                 st.markdown(f"#### Détail des réservations Piscine (Total : {total_piscine})")
-                cp_aff1, cp_aff2, cp_aff3 = st.columns(3)
+                cp_aff1, cp_aff2, cp_aff3, cp_aff4 = st.columns(4)
                 cp_aff1.metric("Eatnow", p_eat)
                 cp_aff2.metric("Mysonbed", p_bed)
-                cp_aff3.metric("Direct", p_dir)
+                cp_aff3.metric("Marrakech For You", p_mfy)
+                cp_aff4.metric("Direct", p_dir)
                 
                 st.markdown("---")
                 st.subheader("🔍 Suivi de l'état des espaces")
@@ -670,7 +679,4 @@ elif page == "📋 Consulter les Rapports":
                 st.markdown("---")
                 st.subheader("📝 Notes du Manager")
                 notes = row.get('Notes_Manager', 'Aucune')
-                if pd.isna(notes) or str(notes).strip() == "" or str(notes).strip().lower() == "nan" or str(notes).strip() == "Aucune":
-                    st.write("_Aucune note générale rédigée pour ce shift._")
-                else:
-                    st.info(notes)
+                st.write(notes)
