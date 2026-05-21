@@ -201,15 +201,10 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
         
     return pdf.output()
 
-# Configuration Streamlit
-st.set_page_config(page_title="Les Palmiers - Rapports", layout="centered")
-
-# --- AJOUT LOGO DANS LA SIDEBAR ---
-if os.path.exists(LOGO_FILE):
-    try:
-        st.sidebar.image(LOGO_FILE, use_container_width=True)
-    except:
-        pass
+# --- CONFIGURATION STREAMLIT (ICÔNE DE L'APPLICATION APPLIQUÉE ICI) ---
+# Si logo.png existe, il devient l'icône officielle de l'onglet du navigateur
+icon_param = LOGO_FILE if os.path.exists(LOGO_FILE) else "📝"
+st.set_page_config(page_title="Les Palmiers - Rapports", page_icon=icon_param, layout="centered")
 
 st.title("Les Palmiers Boutique Hotel & Spa")
 st.markdown("---")
@@ -279,7 +274,6 @@ if page == "✍️ Saisir un Rapport":
             rm_sujet = rc3.text_input("Sujet", placeholder="Problème Wi-Fi")
             rm_action = rc4.text_input("Action prise", placeholder="Répéteur relancé")
             
-            # Nouveau : Upload de photo pour la réclamation
             rm_photo = st.file_uploader("📷 Ajouter une photo d'illustration (Optionnel)", type=["jpg", "jpeg", "png"], key="photo_rec_m")
             
             submit_rec_m = st.form_submit_button("➕ Ajouter la réclamation (Matin)", use_container_width=True)
@@ -292,12 +286,11 @@ if page == "✍️ Saisir un Rapport":
                         "Chambre": rm_chambre if rm_chambre else "Inconnu", 
                         "Sujet": rm_sujet if rm_sujet else "Non spécifié", 
                         "Action": rm_action if rm_action else "Aucune",
-                        "Photo": base64_img  # Stocké proprement sous forme de texte
+                        "Photo": base64_img
                     })
                 st.rerun()
                 
         if st.session_state.reclamations_matin:
-            # On masque la colonne photo brute dans le résumé en tableau pour rester propre
             df_m_aff = pd.DataFrame(st.session_state.reclamations_matin)
             if "Photo" in df_m_aff.columns:
                 df_m_aff["Photo"] = df_m_aff["Photo"].apply(lambda x: "📸 Oui" if x else "Non")
@@ -405,7 +398,6 @@ if page == "✍️ Saisir un Rapport":
             r_sujet = rc3.text_input("Sujet", placeholder="Pas d'eau chaude")
             r_action = rc4.text_input("Action prise", placeholder="Technicien envoyé")
             
-            # Nouveau : Upload de photo pour le soir
             rs_photo = st.file_uploader("📷 Ajouter une photo d'illustration (Optionnel)", type=["jpg", "jpeg", "png"], key="photo_rec_s")
             
             submit_rec_s = st.form_submit_button("➕ Ajouter la réclamation (Soir)", use_container_width=True)
@@ -533,7 +525,6 @@ elif page == "📋 Consulter les Rapports":
                     st.subheader("🚨 Réclamations Clients")
                     liste_rec = safe_load_json(row.get('Reclamations_Detail', '[]'))
                     if liste_rec and len(liste_rec) > 0:
-                        # Nettoyage visuel du tableau
                         df_table_rec = pd.DataFrame(liste_rec)
                         has_photos = "Photo" in df_table_rec.columns
                         
@@ -544,7 +535,6 @@ elif page == "📋 Consulter les Rapports":
                         else:
                             st.table(df_table_rec)
                         
-                        # Affichage visuel des photos sous le tableau
                         if has_photos:
                             with st.expander("🖼️ Visualiser les photos des réclamations"):
                                 for item in liste_rec:
