@@ -192,17 +192,32 @@ st.set_page_config(
     layout="centered"
 )
 
-# NETTOYAGE STRICT INTERFACE : Supprime le footer "Hosted with Streamlit", le header et le menu d'options
+# NETTOYAGE STRICT INTERFACE ET FORÇAGE DE L'ICÔNE POUR LES MOBILES (PWA)
 masquer_elements_streamlit = """
             <style>
             #MainMenu {visibility: hidden !important;}
-            footer {visibility: hidden !important;}
-            header {visibility: hidden !important;}
+            footer {visibility: hidden !important; display: none !important;}
+            header {visibility: hidden !important; display: none !important;}
             .stAppHeader {display: none !important;}
             [data-testid="stDecoration"] {display: none !important;}
             [data-testid="stHeader"] {display: none !important;}
+            [data-testid="stFooter"] {display: none !important;}
             footer a {display: none !important;}
             div.styles_viewerBadge__R_C1q {display: none !important;}
+            .viewerBadge_link__3vsnA {display: none !important;}
+            
+            /* Astuce invisible pour forcer le téléphone à capturer le logo en icône d'application mobile */
+            body::before {
+                content: "";
+                background-image: url('app/static/logo.png'), url('logo.png');
+                display: block;
+                width: 1px;
+                height: 1px;
+                position: absolute;
+                top: -10px;
+                left: -10px;
+                opacity: 0.01;
+            }
             </style>
             """
 st.markdown(masquer_elements_streamlit, unsafe_allow_html=True)
