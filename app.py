@@ -65,7 +65,7 @@ def image_to_base64(uploaded_file):
     return ""
 
 # =========================================================================
-# FONCTION PDF CORRIGÉE : SANS PAGE BLANCHE ET SANS ERREUR TYPICALE
+# FONCTION PDF STANDARDISÉE ET UNIVERSELLE (ANTI-CORRUPTION)
 # =========================================================================
 def generer_pdf(row, date_texte, shift, espaces_liste):
     pdf = FPDF()
@@ -235,8 +235,8 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
     pdf.cell(120, 6, "", ln=False)
     pdf.cell(45, 6, clean_txt("Signature :"), ln=True, align="L")
     
-    # Méthode native FPDF2 : Retourne les octets sans aucun problème de flux
-    return pdf.output()
+    # Sortie sécurisée : encode en latin-1 pour s'assurer que les bytes soient purs et lisibles par Streamlit
+    return pdf.output(dest='S').encode('latin-1')
 
 # --- RESTE DE LA CONFIGURATION STREAMLIT ---
 icon_param = LOGO_FILE if os.path.exists(LOGO_FILE) else "📝"
@@ -549,7 +549,7 @@ elif page == "📋 Consulter les Rapports":
                     
                     row = rapport_selectionne.iloc[0]
                     
-                    # Récupération sécurisée du flux d'octets généré via la méthode native FPDF2
+                    # Récupération propre du flux binaire
                     pdf_data = generer_pdf(row, date_fr, shift_choisi, espaces)
                     
                     st.download_button(
