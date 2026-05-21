@@ -65,7 +65,7 @@ def image_to_base64(uploaded_file):
     return ""
 
 # =========================================================================
-# FONCTION PDF CORRIGÉE : SANS PAGE BLANCHE via BytesIO
+# FONCTION PDF CORRIGÉE : SANS PAGE BLANCHE ET SANS ERREUR TYPICALE
 # =========================================================================
 def generer_pdf(row, date_texte, shift, espaces_liste):
     pdf = FPDF()
@@ -235,11 +235,8 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
     pdf.cell(120, 6, "", ln=False)
     pdf.cell(45, 6, clean_txt("Signature :"), ln=True, align="L")
     
-    # Solution ultime anti-page blanche : passer par un flux BytesIO local
-    buffer = BytesIO()
-    pdf.output(dest='F', name=buffer)
-    buffer.seek(0)
-    return buffer.getvalue()
+    # Méthode native FPDF2 : Retourne les octets sans aucun problème de flux
+    return pdf.output()
 
 # --- RESTE DE LA CONFIGURATION STREAMLIT ---
 icon_param = LOGO_FILE if os.path.exists(LOGO_FILE) else "📝"
@@ -552,7 +549,7 @@ elif page == "📋 Consulter les Rapports":
                     
                     row = rapport_selectionne.iloc[0]
                     
-                    # Récupération sécurisée du flux d'octets généré via BytesIO
+                    # Récupération sécurisée du flux d'octets généré via la méthode native FPDF2
                     pdf_data = generer_pdf(row, date_fr, shift_choisi, espaces)
                     
                     st.download_button(
