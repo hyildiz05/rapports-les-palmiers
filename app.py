@@ -13,13 +13,13 @@ DB_FILE = "rapports_les_palmiers.csv"
 LOGO_FILE = "logo.png"
 
 # ==========================================
-# CONFIGURATION DE L'APPLICATION ET DE L'ICÔNE
+# CONFIGURATION DE L'ICÔNE DE L'APPLI SEULEMENT
 # ==========================================
-app_icon = "📝" # Icône de secours
+app_icon = "📝" 
 if os.path.exists(LOGO_FILE):
     try:
         img_ouverture = Image.open(LOGO_FILE)
-        # On force le redimensionnement en format icône carré pour éviter les bugs de PNG lourds
+        # Redimensionnement carré idéal pour l'icône d'écran d'accueil
         app_icon = img_ouverture.resize((192, 192))
     except:
         app_icon = "📝"
@@ -83,34 +83,26 @@ def image_to_base64(uploaded_file):
     return ""
 
 # =========================================================================
-# FONCTION PDF STANDARDISÉE AVEC LOGO INTÉGRÉ
+# FONCTION PDF STANDARDISÉE ET UNIVERSELLE
 # =========================================================================
-# l'en-tête intègre maintenant le fichier logo.png s'il existe sur votre GitHub
 def generer_pdf(row, date_texte, shift, espaces_liste):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_margins(15, 15, 15)
     
-    # Couleurs du thème (Inspiré de votre logo Marron/Beige)
-    c_titre = (94, 80, 63)      # Marron foncé élégant
-    c_texte = (40, 40, 40)      # Presque noir pour la lisibilité
-    c_gris_clair = (245, 242, 238) # Fond de cellule beige très clair
+    # Couleurs du thème
+    c_titre = (94, 80, 63)      
+    c_texte = (40, 40, 40)      
+    c_gris_clair = (245, 242, 238) 
     
-    # --- 1. EN-TÊTE AVEC LOGO GITHUB ---
-    if os.path.exists(LOGO_FILE):
-        try:
-            # Positionne le logo à droite (X=150, Y=15, Largeur=45mm)
-            pdf.image(LOGO_FILE, x=150, y=12, w=45)
-        except:
-            pass
-            
+    # --- 1. EN-TÊTE ---
     pdf.set_font("Helvetica", "B", 18)
     pdf.set_text_color(*c_titre)
-    pdf.cell(130, 10, clean_txt(f"{shift} SHIFT REPORT"), ln=True, align="L")
+    pdf.cell(0, 10, clean_txt(f"{shift} SHIFT REPORT"), ln=True, align="L")
     
     pdf.set_font("Helvetica", "B", 11)
     pdf.set_text_color(120, 120, 120)
-    pdf.cell(130, 6, clean_txt("Les Palmiers Boutique Hotel & Spa"), ln=True, align="L")
+    pdf.cell(0, 6, clean_txt("Les Palmiers Boutique Hotel & Spa"), ln=True, align="L")
     
     pdf.set_font("Helvetica", "", 10)
     pdf.set_text_color(*c_texte)
@@ -124,18 +116,15 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
     pdf.cell(0, 8, clean_txt("OPÉRATIONS DU JOUR"), ln=True)
     pdf.ln(1)
     
-    # En-tête du tableau Opérations
     pdf.set_font("Helvetica", "B", 10)
     pdf.set_fill_color(*c_gris_clair)
     pdf.cell(110, 7, clean_txt("Informations"), border=1, fill=True)
     pdf.cell(55, 7, clean_txt("Total"), border=1, ln=True, align="C")
     
     pdf.set_font("Helvetica", "", 10)
-    # Ligne 1 : Chambres occupées
     pdf.cell(110, 6, clean_txt("Chambres occupées"), border=1)
     pdf.cell(55, 6, clean_txt(str(int(row.get('Chambres_Occupees', 0)))), border=1, ln=True, align="C")
     
-    # Ligne 2 & 3 dynamiques selon le shift
     if shift == "MATIN":
         pdf.cell(110, 6, clean_txt("Arrivées prévues"), border=1)
         pdf.cell(55, 6, clean_txt(str(int(row.get('Arrivees_Prevues', 0)))), border=1, ln=True, align="C")
@@ -147,16 +136,13 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
         pdf.cell(110, 6, clean_txt("Départs tardifs"), border=1)
         pdf.cell(55, 6, clean_txt(str(int(row.get('Departs_Tardifs', 0)))), border=1, ln=True, align="C")
         
-    # Ligne 4 : Chambres VIP
     pdf.cell(110, 6, clean_txt("Chambres VIP"), border=1)
     pdf.cell(55, 6, clean_txt(str(int(row.get('VIP', 0)))), border=1, ln=True, align="C")
     
-    # Ligne 5 : Réclamations clients
     liste_rec = safe_load_json(row.get('Reclamations_Detail', '[]'))
     pdf.cell(110, 6, clean_txt("Réclamations clients"), border=1)
     pdf.cell(55, 6, clean_txt(str(len(liste_rec))), border=1, ln=True, align="C")
     
-    # Ligne 6 : Incidents techniques
     pdf.cell(110, 6, clean_txt("Incidents techniques"), border=1)
     pdf.cell(55, 6, clean_txt(str(int(row.get('Incidents_Techniques', 0)))), border=1, ln=True, align="C")
     
@@ -178,7 +164,6 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
     pdf.set_font("Helvetica", "", 9)
     for esp in espaces_liste:
         pdf.cell(45, 6, clean_txt(esp), border=1)
-        
         raw_etat = row.get(f"{esp}_Etat", "OK")
         etat_val = "Alerte" if str(raw_etat).strip().lower() == "alerte" else "OK"
         
@@ -263,13 +248,9 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
     
     return pdf.output(dest='S').encode('latin-1')
 
-# --- INITIALISATION DE L'INTERFACE PRINCIPALE ---
-# On affiche aussi l'image en haut de la barre latérale pour faire joli si présente
-if os.path.exists(LOGO_FILE):
-    try:
-        st.sidebar.image(LOGO_FILE, use_container_width=True)
-    except:
-        pass
+# --- APPARENCE ET NAVIGATION ---
+st.title("Les Palmiers Boutique Hotel & Spa")
+st.markdown("---")
 
 page = st.sidebar.radio("Navigation", ["✍️ Saisir un Rapport", "📋 Consulter les Rapports"])
 
@@ -564,7 +545,7 @@ elif page == "📋 Consulter les Rapports":
                 st.success(f"### 📄 Fiche trouvée : {date_fr} — Shift {shift_choisi}")
                 row = rapport_selectionne.iloc[0]
                 
-                # Génération dynamique du PDF (avec logo embarqué si présent)
+                # Génération du PDF
                 pdf_data = generer_pdf(row, date_fr, shift_choisi, espaces)
                 
                 st.download_button(
