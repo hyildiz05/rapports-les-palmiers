@@ -16,13 +16,11 @@ def sauvegarder_rapport(donnees):
         try:
             df = pd.read_csv(DB_FILE)
             
-            # Vérification : existe-t-il déjà un rapport pour cette date et ce shift ?
             if not df.empty and 'Date' in df.columns and 'Shift' in df.columns:
                 doublon_index = df[(df['Date'] == donnees['Date']) & (df['Shift'] == donnees['Shift'])].index
                 if not doublon_index.empty:
                     df = df.drop(doublon_index)
             
-            # Fusion propre des lignes
             df = pd.concat([df, nouveau_df], ignore_index=True, sort=False)
         except Exception:
             df = nouveau_df
@@ -31,13 +29,13 @@ def sauvegarder_rapport(donnees):
         
     df.to_csv(DB_FILE, index=False, encoding='utf-8-sig')
 
-# Fonction pour nettoyer les textes (supprime les "nan" et gère les accents pour FPDF)
+# Fonction pour nettoyer les textes (supprime les "nan")
 def clean_txt(valeur):
     if pd.isna(valeur) or str(valeur).strip().lower() == "nan" or str(valeur).strip() == "":
-        return "Aucune"
+        return ""
     return str(valeur).encode('latin-1', 'replace').decode('latin-1')
 
-# Fonction pour décoder proprement le JSON stocké dans le CSV
+# Fonction pour décoder le JSON du CSV
 def safe_load_json(valeur):
     if pd.isna(valeur) or str(valeur).strip() == "" or str(valeur).strip().lower() == "nan":
         return []
@@ -59,7 +57,7 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
     # --- EN-TÊTE ---
     pdf.set_font("Helvetica", "B", 18)
     pdf.set_text_color(44, 62, 80)
-    pdf.cell(0, 10, clean_txt("LES PALMIERS BOUTIQUE HOTEL & SPA"), ln=True, align="C")
+    pdf.cell(0, 10, "LES PALMIERS BOUTIQUE HOTEL & SPA", ln=True, align="C")
     
     pdf.set_font("Helvetica", "B", 14)
     pdf.set_text_color(127, 140, 141)
@@ -70,22 +68,22 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
     # --- RÉSUMÉ DES OPÉRATIONS ---
     pdf.set_font("Helvetica", "B", 12)
     pdf.set_text_color(44, 62, 80)
-    pdf.cell(0, 8, clean_txt("1. Résumé des Opérations"), ln=True)
+    pdf.cell(0, 8, "1. Resume des Operations", ln=True)
     pdf.line(15, pdf.get_y(), 195, pdf.get_y())
     pdf.ln(3)
     
     pdf.set_font("Helvetica", "", 10)
     pdf.set_text_color(0, 0, 0)
     
-    pdf.cell(70, 6, clean_txt(f"- Chambres occupées : {int(row.get('Chambres_Occupees', 0))}"), ln=False)
+    pdf.cell(70, 6, clean_txt(f"- Chambres occupees : {int(row.get('Chambres_Occupees', 0))}"), ln=False)
     pdf.cell(70, 6, clean_txt(f"- Chambres VIP : {int(row.get('VIP', 0))}"), ln=True)
     
     if shift == "MATIN":
-        pdf.cell(70, 6, clean_txt(f"- Arrivées prévues : {int(row.get('Arrivees_Prevues', 0))}"), ln=False)
-        pdf.cell(70, 6, clean_txt(f"- Départs prévus : {int(row.get('Departs_Prevus', 0))}"), ln=True)
+        pdf.cell(70, 6, clean_txt(f"- Arrivees prevues : {int(row.get('Arrivees_Prevues', 0))}"), ln=False)
+        pdf.cell(70, 6, clean_txt(f"- Departs prevus : {int(row.get('Departs_Prevus', 0))}"), ln=True)
     else:
         pdf.cell(70, 6, clean_txt(f"- Late Check-in : {int(row.get('Late_Check_In', 0))}"), ln=False)
-        pdf.cell(70, 6, clean_txt(f"- Départs tardifs : {int(row.get('Departs_Tardifs', 0))}"), ln=True)
+        pdf.cell(70, 6, clean_txt(f"- Departs tardifs : {int(row.get('Departs_Tardifs', 0))}"), ln=True)
         
     pdf.cell(70, 6, clean_txt(f"- Incidents techniques : {int(row.get('Incidents_Techniques', 0))}"), ln=True)
     pdf.ln(6)
@@ -93,7 +91,7 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
     # --- RÉCLAMATIONS CLIENTS ---
     pdf.set_font("Helvetica", "B", 12)
     pdf.set_text_color(44, 62, 80)
-    pdf.cell(0, 8, clean_txt("2. Réclamations Clients"), ln=True)
+    pdf.cell(0, 8, "2. Reclamations Clients", ln=True)
     pdf.line(15, pdf.get_y(), 195, pdf.get_y())
     pdf.ln(3)
     
@@ -101,10 +99,10 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
         
     if liste_rec and len(liste_rec) > 0:
         pdf.set_font("Helvetica", "B", 9)
-        pdf.cell(20, 6, clean_txt("Heure"), border=1, align="C")
-        pdf.cell(35, 6, clean_txt("Chambre / Client"), border=1)
-        pdf.cell(60, 6, clean_txt("Sujet"), border=1)
-        pdf.cell(65, 6, clean_txt("Action prise"), border=1, ln=True)
+        pdf.cell(20, 6, "Heure", border=1, align="C")
+        pdf.cell(35, 6, "Chambre / Client", border=1)
+        pdf.cell(60, 6, "Sujet", border=1)
+        pdf.cell(65, 6, "Action prise", border=1, ln=True)
         
         pdf.set_font("Helvetica", "", 9)
         for rec in liste_rec:
@@ -114,13 +112,13 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
             pdf.cell(65, 6, clean_txt(rec.get('Action',''))[:38], border=1, ln=True)
     else:
         pdf.set_font("Helvetica", "I", 10)
-        pdf.cell(0, 6, clean_txt("Aucune réclamation sur ce shift."), ln=True)
+        pdf.cell(0, 6, "Aucune reclamation sur ce shift.", ln=True)
     pdf.ln(6)
     
     # --- PRIORITÉS TRANSMISES ---
     pdf.set_font("Helvetica", "B", 12)
     pdf.set_text_color(44, 62, 80)
-    pdf.cell(0, 8, clean_txt("3. Priorités Transmises"), ln=True)
+    pdf.cell(0, 8, "3. Priorites Transmises", ln=True)
     pdf.line(15, pdf.get_y(), 195, pdf.get_y())
     pdf.ln(3)
     
@@ -132,20 +130,20 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
             pdf.multi_cell(0, 6, clean_txt(f"{idx}. {p}"))
     else:
         pdf.set_font("Helvetica", "I", 10)
-        pdf.cell(0, 6, clean_txt("Aucune priorité spécifique enregistrée."), ln=True)
+        pdf.cell(0, 6, "Aucune priorite specifique enregistree.", ln=True)
     pdf.ln(6)
     
     # --- NOTES MANAGER ---
     pdf.set_font("Helvetica", "B", 12)
     pdf.set_text_color(44, 62, 80)
-    pdf.cell(0, 8, clean_txt("4. Notes du Manager"), ln=True)
+    pdf.cell(0, 8, "4. Notes du Manager", ln=True)
     pdf.line(15, pdf.get_y(), 195, pdf.get_y())
     pdf.ln(3)
     
     notes = row.get('Notes_Manager', '')
     if pd.isna(notes) or str(notes).strip() == "" or str(notes).strip().lower() == "nan":
         pdf.set_font("Helvetica", "I", 10)
-        pdf.cell(0, 6, clean_txt("Aucune observation générale rédigée."), ln=True)
+        pdf.cell(0, 6, "Aucune observation generale redigee.", ln=True)
     else:
         pdf.set_font("Helvetica", "", 10)
         pdf.multi_cell(0, 6, clean_txt(notes))
@@ -154,15 +152,15 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
     # --- ÉTAT DES ESPACES ---
     pdf.set_font("Helvetica", "B", 12)
     pdf.set_text_color(44, 62, 80)
-    pdf.cell(0, 8, clean_txt("5. Suivi des Espaces Communs"), ln=True)
+    pdf.cell(0, 8, "5. Suivi des Espaces Communs", ln=True)
     pdf.line(15, pdf.get_y(), 195, pdf.get_y())
     pdf.ln(3)
     
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(45, 6, clean_txt("Espace"), border=1)
-    pdf.cell(20, 6, clean_txt("État"), border=1, align="C")
-    pdf.cell(60, 6, clean_txt("Observations"), border=1)
-    pdf.cell(55, 6, clean_txt("Intervention"), border=1, ln=True)
+    pdf.cell(45, 6, "Espace", border=1)
+    pdf.cell(20, 6, "Etat", border=1, align="C")
+    pdf.cell(60, 6, "Observations", border=1)
+    pdf.cell(55, 6, "Intervention", border=1, ln=True)
     
     pdf.set_font("Helvetica", "", 9)
     for esp in espaces_liste:
@@ -179,22 +177,58 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
         pdf.cell(20, 6, clean_txt(etat_val), border=1, align="C")
         pdf.set_text_color(0, 0, 0)
         
-        obs_val = clean_txt(row.get(f"{esp}_Observations", "Aucune"))
-        interv_val = clean_txt(row.get(f"{esp}_Intervention", "Aucune"))
+        obs_val = clean_txt(row.get(f"{esp}_Observations", ""))
+        interv_val = clean_txt(row.get(f"{esp}_Intervention", ""))
         
         pdf.cell(60, 6, obs_val[:35], border=1)
         pdf.cell(55, 6, interv_val[:32], border=1, ln=True)
         
     return pdf.output()
 
-# Configuration Streamlit
-st.set_page_config(page_title="Les Palmiers - Rapports", layout="centered")
+# --- CONFIGURATION DE PAGE ---
+st.set_page_config(
+    page_title="Les Palmiers", 
+    page_icon="logo.png", 
+    layout="centered"
+)
+
+# NETTOYAGE STRICT INTERFACE ET FORÇAGE DE L'ICÔNE POUR LES MOBILES (PWA)
+masquer_elements_streamlit = """
+            <style>
+            #MainMenu {visibility: hidden !important;}
+            footer {visibility: hidden !important; display: none !important;}
+            header {visibility: hidden !important; display: none !important;}
+            .stAppHeader {display: none !important;}
+            [data-testid="stDecoration"] {display: none !important;}
+            [data-testid="stHeader"] {display: none !important;}
+            [data-testid="stFooter"] {display: none !important;}
+            footer a {display: none !important;}
+            div.styles_viewerBadge__R_C1q {display: none !important;}
+            .viewerBadge_link__3vsnA {display: none !important;}
+            
+            /* Astuce invisible pour forcer le téléphone à capturer le logo en icône d'application mobile */
+            body::before {
+                content: "";
+                background-image: url('app/static/logo.png'), url('logo.png');
+                display: block;
+                width: 1px;
+                height: 1px;
+                position: absolute;
+                top: -10px;
+                left: -10px;
+                opacity: 0.01;
+            }
+            </style>
+            """
+st.markdown(masquer_elements_streamlit, unsafe_allow_html=True)
+
+# Titre textuel classique sans l'image au milieu
 st.title("Les Palmiers Boutique Hotel & Spa")
 st.markdown("---")
 
 page = st.sidebar.radio("Navigation", ["✍️ Saisir un Rapport", "📋 Consulter les Rapports"])
 
-# Initialisation persistante du Session State pour les listes dynamiques
+# Initialisation du Session State
 if 'reclamations_matin' not in st.session_state:
     st.session_state.reclamations_matin = []
 if 'reclamations_soir' not in st.session_state:
@@ -214,8 +248,6 @@ espaces = [
 # ==========================================
 if page == "✍️ Saisir un Rapport":
     shift = st.sidebar.radio("Sélectionnez le Shift", ["☀️ Shift MATIN", "🌙 Shift SOIR"])
-    
-    # ÉTAPE SUIVANTE INTÉGRÉE : Sélection de la date à la saisie pour plus de flexibilité
     date_selectionnee = st.sidebar.date_input("📅 Date du Rapport", value=datetime.now().date())
     date_rapport_str = date_selectionnee.strftime("%Y-%m-%d")
 
@@ -233,21 +265,21 @@ if page == "✍️ Saisir un Rapport":
 
         st.markdown("---")
         st.subheader("SUIVI DES ESPACES")
-        etat_espaces_matin = {}
+        
+        sig_matin = {}
         for espace in espaces:
             st.write(f"**{espace}**")
             c1, c2, c3 = st.columns([1.5, 2.5, 2.5])
             with c1:
-                etat = st.selectbox("État", ["OK", "Alerte"], key=f"matin_etat_{espace}")
+                st.selectbox("État", ["OK", "Alerte"], key=f"matin_etat_{espace}", label_visibility="collapsed")
             with c2:
-                obs = st.text_input("Observations", placeholder="RAS", key=f"matin_obs_{espace}")
+                st.text_input("Observations", placeholder="Observations", key=f"matin_obs_{espace}", label_visibility="collapsed")
             with c3:
-                interv = st.text_input("Intervention nécessaire", placeholder="Aucune", key=f"matin_int_{espace}")
+                st.text_input("Intervention", placeholder="Intervention", key=f"matin_int_{espace}", label_visibility="collapsed")
             
-            etat_espaces_matin[f"{espace}_Etat"] = etat
-            etat_espaces_matin[f"{espace}_Observations"] = obs if obs.strip() != "" else "Aucune"
-            etat_espaces_matin[f"{espace}_Intervention"] = interv if interv.strip() != "" else "Aucune"
-            st.markdown("<hr style='margin:0.5em 0px;', size='1'>", unsafe_allow_html=True)
+            sig_matin[f"{espace}_Etat"] = st.session_state[f"matin_etat_{espace}"]
+            sig_matin[f"{espace}_Observations"] = st.session_state[f"matin_obs_{espace}"] if st.session_state[f"matin_obs_{espace}"].strip() != "" else "Aucune"
+            sig_matin[f"{espace}_Intervention"] = st.session_state[f"matin_int_{espace}"] if st.session_state[f"matin_int_{espace}"].strip() != "" else "Aucune"
 
         st.markdown("---")
         st.subheader("RÉCLAMATIONS CLIENTS")
@@ -310,9 +342,9 @@ if page == "✍️ Saisir un Rapport":
                 "Notes_Manager": notes_manager_matin if notes_manager_matin.strip() != "" else "Aucune",
                 "Reclamations_Detail": json.dumps(st.session_state.reclamations_matin)
             }
-            donnees_rapport.update(etat_espaces_matin)
+            donnees_rapport.update(sig_matin)
             sauvegarder_rapport(donnees_rapport)
-            st.success("🎉 Le rapport du matin a été enregistré / mis à jour avec succès !")
+            st.success("🎉 Le rapport du matin a été enregistré avec succès !")
             
             st.session_state.reclamations_matin = []
             st.session_state.priorites_matin = []
@@ -332,8 +364,6 @@ if page == "✍️ Saisir un Rapport":
                     if prio_m_aff:
                         for idx, p in enumerate(prio_m_aff, 1):
                             st.write(f"   {idx}. {p}")
-                    else:
-                        st.write("• Aucune priorité transmise.")
             except:
                 pass
         
@@ -350,21 +380,20 @@ if page == "✍️ Saisir un Rapport":
 
         st.markdown("---")
         st.subheader("SUIVI DES ESPACES")
-        etat_espaces_soir = {}
+        sig_soir = {}
         for espace in espaces:
             st.write(f"**{espace}**")
             c1, c2, c3 = st.columns([1.5, 2.5, 2.5])
             with c1:
-                etat = st.selectbox("État", ["OK", "Alerte"], key=f"soir_etat_{espace}")
+                st.selectbox("État", ["OK", "Alerte"], key=f"soir_etat_{espace}", label_visibility="collapsed")
             with c2:
-                obs = st.text_input("Observations", placeholder="RAS", key=f"soir_obs_{espace}")
+                st.text_input("Observations", placeholder="Observations", key=f"soir_obs_{espace}", label_visibility="collapsed")
             with c3:
-                interv = st.text_input("Intervention nécessaire", placeholder="Aucune", key=f"soir_int_{espace}")
+                st.text_input("Intervention", placeholder="Intervention", key=f"soir_int_{espace}", label_visibility="collapsed")
             
-            etat_espaces_soir[f"{espace}_Etat"] = etat
-            etat_espaces_soir[f"{espace}_Observations"] = obs if obs.strip() != "" else "Aucune"
-            etat_espaces_soir[f"{espace}_Intervention"] = interv if interv.strip() != "" else "Aucune"
-            st.markdown("<hr style='margin:0.5em 0px;', size='1'>", unsafe_allow_html=True)
+            sig_soir[f"{espace}_Etat"] = st.session_state[f"soir_etat_{espace}"]
+            sig_soir[f"{espace}_Observations"] = st.session_state[f"soir_obs_{espace}"] if st.session_state[f"soir_obs_{espace}"].strip() != "" else "Aucune"
+            sig_soir[f"{espace}_Intervention"] = st.session_state[f"soir_int_{espace}"] if st.session_state[f"soir_int_{espace}"].strip() != "" else "Aucune"
 
         st.markdown("---")
         st.subheader("RÉCLAMATIONS CLIENTS")
@@ -426,16 +455,16 @@ if page == "✍️ Saisir un Rapport":
                 "Notes_Manager": notes_manager_soir if notes_manager_soir.strip() != "" else "Aucune",
                 "Reclamations_Detail": json.dumps(st.session_state.reclamations_soir)
             }
-            donnees_soir.update(etat_espaces_soir)
+            donnees_soir.update(sig_soir)
             sauvegarder_rapport(donnees_soir)
-            st.success("🎉 Le rapport du soir a été enregistré / mis à jour avec succès !")
+            st.success("🎉 Le rapport du soir a été enregistré avec succès !")
             
             st.session_state.reclamations_soir = []
             st.session_state.priorites_soir = []
             st.rerun()
 
 # ==========================================
-# PAGE 2 : CONSULTATION ET TÉLÉCHARGEMENT PDF
+# PAGE 2 : CONSULTATION
 # ==========================================
 elif page == "📋 Consulter les Rapports":
     st.header("📋 Liste des Rapports Enregistrés")
@@ -446,10 +475,9 @@ elif page == "📋 Consulter les Rapports":
         df_consult = pd.read_csv(DB_FILE)
         
         if df_consult.empty:
-            st.info("ℹ️ Aucun rapport trouvé dans la base de données.")
+            st.info("ℹ️ Aucun rapport trouvé.")
         else:
             date_aujourdhui_dt = datetime.now().date()
-            
             c_date, c_shift = st.columns(2)
             with c_date:
                 date_selectionnee_dt = st.date_input("📅 Choisir la Date", value=date_aujourdhui_dt)
@@ -503,8 +531,6 @@ elif page == "📋 Consulter les Rapports":
                     if liste_prio and len(liste_prio) > 0:
                         for idx, p in enumerate(liste_prio, 1):
                             st.write(f"**{idx}.** {p}")
-                    else:
-                        st.write("✓ Aucune priorité spécifique enregistrée.")
                     
                     st.subheader("📝 Notes du Manager")
                     notes = row.get('Notes_Manager', '')
@@ -519,8 +545,8 @@ elif page == "📋 Consulter les Rapports":
                             espaces_data.append({
                                 "Espace": esp,
                                 "État": row.get(f"{esp}_Etat", "N/A"),
-                                "Observations": "Aucune" if pd.isna(row.get(f"{esp}_Observations")) or str(row.get(f"{esp}_Observations")).strip().lower() == "nan" or str(row.get(f"{esp}_Observations")).strip() == "" else row.get(f"{esp}_Observations"),
-                                "Intervention": "Aucune" if pd.isna(row.get(f"{esp}_Intervention")) or str(row.get(f"{esp}_Intervention")).strip().lower() == "nan" or str(row.get(f"{esp}_Intervention")).strip() == "" else row.get(f"{esp}_Intervention")
+                                "Observations": "" if pd.isna(row.get(f"{esp}_Observations")) or str(row.get(f"{esp}_Observations")).strip().lower() == "nan" or str(row.get(f"{esp}_Observations")).strip() == "" else row.get(f"{esp}_Observations"),
+                                "Intervention": "" if pd.isna(row.get(f"{esp}_Intervention")) or str(row.get(f"{esp}_Intervention")).strip().lower() == "nan" or str(row.get(f"{esp}_Intervention")).strip() == "" else row.get(f"{esp}_Intervention")
                             })
                         st.table(pd.DataFrame(espaces_data))
                     
