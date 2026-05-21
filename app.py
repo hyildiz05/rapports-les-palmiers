@@ -434,7 +434,7 @@ if page == "✍️ Saisir un Rapport":
             s_vip = st.number_input("Chambres VIP", min_value=0, value=0, key="s_vip")
             s_incidents = st.number_input("Incidents techniques", min_value=0, value=0, key="s_inc")
             
-        st.markdown("#### 🏊‍♂️ Réservations Piscine (Provenance)")
+        st.markdown("####  Réservations Piscine (Provenance)")
         cps1, cps2, cps3 = st.columns(3)
         with cps1:
             s_piscine_eat = st.number_input("Eatnow", min_value=0, value=0, key="s_p_eat")
