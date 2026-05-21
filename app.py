@@ -35,7 +35,7 @@ def sauvegarder_rapport(donnees):
         
     df.to_csv(DB_FILE, index=False, encoding='utf-8-sig')
 
-# Fonction pour nettoyer les textes (supprime les "nan" et gère les accents pour FPDF)
+# Fonction pour nettoyer les textes
 def clean_txt(valeur):
     if pd.isna(valeur) or str(valeur).strip().lower() == "nan" or str(valeur).strip() == "":
         return "Aucune"
@@ -54,7 +54,7 @@ def safe_load_json(valeur):
         except:
             return []
 
-# Fonction pour encoder une image uploadée en Base64 pour le stockage CSV
+# Fonction pour encoder une image uploadée en Base64
 def image_to_base64(uploaded_file):
     if uploaded_file is not None:
         try:
@@ -201,8 +201,7 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
         
     return pdf.output()
 
-# --- CONFIGURATION STREAMLIT (ICÔNE DE L'APPLICATION APPLIQUÉE ICI) ---
-# Si logo.png existe, il devient l'icône officielle de l'onglet du navigateur
+# --- CONFIGURATION STREAMLIT ---
 icon_param = LOGO_FILE if os.path.exists(LOGO_FILE) else "📝"
 st.set_page_config(page_title="Les Palmiers - Rapports", page_icon=icon_param, layout="centered")
 
@@ -251,7 +250,7 @@ if page == "✍️ Saisir un Rapport":
         etat_espaces_matin = {}
         for espace in espaces:
             st.write(f"**{espace}**")
-            c1, c2, c3 = st.columns([1.5, 2.5, 2.5])
+            c1, c2, c3 = st.columns([1.2, 2.4, 2.4])
             with c1:
                 etat = st.selectbox("État", ["OK", "Alerte"], key=f"matin_etat_{espace}")
             with c2:
@@ -259,9 +258,14 @@ if page == "✍️ Saisir un Rapport":
             with c3:
                 interv = st.text_input("Intervention nécessaire", placeholder="Aucune", key=f"matin_int_{espace}")
             
+            # Ajout du champ photo pour l'espace
+            photo_espace = st.file_uploader("📷 Photo de l'espace (Optionnel)", type=["jpg", "jpeg", "png"], key=f"matin_photo_{espace}")
+            
             etat_espaces_matin[f"{espace}_Etat"] = etat
             etat_espaces_matin[f"{espace}_Observations"] = obs if obs.strip() != "" else "Aucune"
             etat_espaces_matin[f"{espace}_Intervention"] = interv if interv.strip() != "" else "Aucune"
+            etat_espaces_matin[f"{espace}_Photo"] = image_to_base64(photo_espace)
+            
             st.markdown("<hr style='margin:0.5em 0px;', size='1'>", unsafe_allow_html=True)
 
         st.markdown("---")
@@ -376,7 +380,7 @@ if page == "✍️ Saisir un Rapport":
         etat_espaces_soir = {}
         for espace in espaces:
             st.write(f"**{espace}**")
-            c1, c2, c3 = st.columns([1.5, 2.5, 2.5])
+            c1, c2, c3 = st.columns([1.2, 2.4, 2.4])
             with c1:
                 etat = st.selectbox("État", ["OK", "Alerte"], key=f"soir_etat_{espace}")
             with c2:
@@ -384,9 +388,14 @@ if page == "✍️ Saisir un Rapport":
             with c3:
                 interv = st.text_input("Intervention nécessaire", placeholder="Aucune", key=f"soir_int_{espace}")
             
+            # Ajout du champ photo pour l'espace
+            photo_espace = st.file_uploader("📷 Photo de l'espace (Optionnel)", type=["jpg", "jpeg", "png"], key=f"soir_photo_{espace}")
+            
             etat_espaces_soir[f"{espace}_Etat"] = etat
             etat_espaces_soir[f"{espace}_Observations"] = obs if obs.strip() != "" else "Aucune"
             etat_espaces_soir[f"{espace}_Intervention"] = interv if interv.strip() != "" else "Aucune"
+            etat_espaces_soir[f"{espace}_Photo"] = image_to_base64(photo_espace)
+            
             st.markdown("<hr style='margin:0.5em 0px;', size='1'>", unsafe_allow_html=True)
 
         st.markdown("---")
@@ -564,16 +573,37 @@ elif page == "📋 Consulter les Rapports":
                     else:
                         st.info(notes)
                         
-                    with st.expander("🔍 Voir le détail de l'état des espaces"):
-                        espaces_data = []
+                    st.subheader("🔍 Suivi de l'état des espaces")
+                    espaces_data = []
+                    for esp in espaces:
+                        has_photo_esp = f"{esp}_Photo" in row and not pd.isna(row.get(f"{esp}_Photo")) and str(row.get(f"{esp}_Photo")).strip() != ""
+                        espaces_data.append({
+                            "Espace": esp,
+                            "État": row.get(f"{esp}_Etat", "N/A"),
+                            "Observations": "Aucune" if pd.isna(row.get(f"{esp}_Observations")) or str(row.get(f"{esp}_Observations")).strip().lower() == "nan" or str(row.get(f"{esp}_Observations")).strip() == "" else row.get(f"{esp}_Observations"),
+                            "Intervention": "Aucune" if pd.isna(row.get(f"{esp}_Intervention")) or str(row.get(f"{esp}_Intervention")).strip().lower() == "nan" or str(row.get(f"{esp}_Intervention")).strip() == "" else row.get(f"{esp}_Intervention"),
+                            "Photo intégrée": "📸 Oui" if has_photo_esp else "Non"
+                        })
+                    st.table(pd.DataFrame(espaces_data))
+                    
+                    # Section dédiée pour visionner les photos des espaces
+                    with st.expander("🖼️ Visualiser les photos des espaces communs"):
+                        photo_trouvee = False
                         for esp in espaces:
-                            espaces_data.append({
-                                "Espace": esp,
-                                "État": row.get(f"{esp}_Etat", "N/A"),
-                                "Observations": "Aucune" if pd.isna(row.get(f"{esp}_Observations")) or str(row.get(f"{esp}_Observations")).strip().lower() == "nan" or str(row.get(f"{esp}_Observations")).strip() == "" else row.get(f"{esp}_Observations"),
-                                "Intervention": "Aucune" if pd.isna(row.get(f"{esp}_Intervention")) or str(row.get(f"{esp}_Intervention")).strip().lower() == "nan" or str(row.get(f"{esp}_Intervention")).strip() == "" else row.get(f"{esp}_Intervention")
-                            })
-                        st.table(pd.DataFrame(espaces_data))
+                            img_b64 = row.get(f"{esp}_Photo")
+                            if not pd.isna(img_b64) and str(img_b64).strip() != "":
+                                photo_trouvee = True
+                                try:
+                                    st.write(f"**Espace : {esp} ({row.get(f'{esp}_Etat')})**")
+                                    st.write(f"Obs: {row.get(f'{esp}_Observations')}")
+                                    img_data = base64.b64decode(img_b64)
+                                    image = Image.open(BytesIO(img_data))
+                                    st.image(image, width=400)
+                                    st.markdown("---")
+                                except:
+                                    st.error(f"Impossible d'afficher l'image de l'espace : {esp}")
+                        if not photo_trouvee:
+                            st.write("Aucune photo n'a été ajoutée pour les espaces dans ce shift.")
                     
                     st.markdown("---")
                     
