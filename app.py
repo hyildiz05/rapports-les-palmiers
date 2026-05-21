@@ -15,14 +15,14 @@ LOGO_FILE = "logo.png"
 # ==========================================
 # CONFIGURATION DE L'APPLICATION ET DE L'ICÔNE
 # ==========================================
-# On charge l'image personnalisée si elle existe, sinon on met un emoji par défaut
+app_icon = "📝" # Icône de secours
 if os.path.exists(LOGO_FILE):
     try:
-        app_icon = Image.open(LOGO_FILE)
+        img_ouverture = Image.open(LOGO_FILE)
+        # On force le redimensionnement en format icône carré pour éviter les bugs de PNG lourds
+        app_icon = img_ouverture.resize((192, 192))
     except:
         app_icon = "📝"
-else:
-    app_icon = "📝"
 
 st.set_page_config(
     page_title="Les Palmiers - Rapports", 
@@ -83,8 +83,9 @@ def image_to_base64(uploaded_file):
     return ""
 
 # =========================================================================
-# FONCTION PDF STANDARDISÉE ET UNIVERSELLE (ANTI-CORRUPTION)
+# FONCTION PDF STANDARDISÉE AVEC LOGO INTÉGRÉ
 # =========================================================================
+# l'en-tête intègre maintenant le fichier logo.png s'il existe sur votre GitHub
 def generer_pdf(row, date_texte, shift, espaces_liste):
     pdf = FPDF()
     pdf.add_page()
@@ -95,20 +96,27 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
     c_texte = (40, 40, 40)      # Presque noir pour la lisibilité
     c_gris_clair = (245, 242, 238) # Fond de cellule beige très clair
     
-    # --- 1. EN-TÊTE ---
+    # --- 1. EN-TÊTE AVEC LOGO GITHUB ---
+    if os.path.exists(LOGO_FILE):
+        try:
+            # Positionne le logo à droite (X=150, Y=15, Largeur=45mm)
+            pdf.image(LOGO_FILE, x=150, y=12, w=45)
+        except:
+            pass
+            
     pdf.set_font("Helvetica", "B", 18)
     pdf.set_text_color(*c_titre)
-    pdf.cell(0, 10, clean_txt(f"{shift} SHIFT MANAGER REPORT"), ln=True, align="L")
+    pdf.cell(130, 10, clean_txt(f"{shift} SHIFT REPORT"), ln=True, align="L")
     
-    pdf.set_font("Helvetica", "B", 12)
+    pdf.set_font("Helvetica", "B", 11)
     pdf.set_text_color(120, 120, 120)
-    pdf.cell(0, 6, clean_txt("Les Palmiers Boutique Hotel & Spa"), ln=True, align="L")
+    pdf.cell(130, 6, clean_txt("Les Palmiers Boutique Hotel & Spa"), ln=True, align="L")
     
     pdf.set_font("Helvetica", "", 10)
     pdf.set_text_color(*c_texte)
     pdf.cell(40, 6, clean_txt(f"Date : {date_texte}"), ln=False)
     pdf.cell(40, 6, clean_txt(f"Shift : {shift}"), ln=True)
-    pdf.ln(5)
+    pdf.ln(8)
     
     # --- 2. OPÉRATIONS DU JOUR ---
     pdf.set_font("Helvetica", "B", 13)
@@ -255,9 +263,13 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
     
     return pdf.output(dest='S').encode('latin-1')
 
-# --- INITIALISATION DE L'INTERFACE ---
-st.title("Les Palmiers Boutique Hotel & Spa")
-st.markdown("---")
+# --- INITIALISATION DE L'INTERFACE PRINCIPALE ---
+# On affiche aussi l'image en haut de la barre latérale pour faire joli si présente
+if os.path.exists(LOGO_FILE):
+    try:
+        st.sidebar.image(LOGO_FILE, use_container_width=True)
+    except:
+        pass
 
 page = st.sidebar.radio("Navigation", ["✍️ Saisir un Rapport", "📋 Consulter les Rapports"])
 
@@ -552,7 +564,7 @@ elif page == "📋 Consulter les Rapports":
                 st.success(f"### 📄 Fiche trouvée : {date_fr} — Shift {shift_choisi}")
                 row = rapport_selectionne.iloc[0]
                 
-                # Génération dynamique du PDF
+                # Génération dynamique du PDF (avec logo embarqué si présent)
                 pdf_data = generer_pdf(row, date_fr, shift_choisi, espaces)
                 
                 st.download_button(
