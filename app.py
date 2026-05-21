@@ -19,7 +19,6 @@ app_icon = "📝"
 if os.path.exists(LOGO_FILE):
     try:
         img_ouverture = Image.open(LOGO_FILE)
-        # Redimensionnement carré idéal pour l'icône d'écran d'accueil
         app_icon = img_ouverture.resize((192, 192))
     except:
         app_icon = "📝"
@@ -38,13 +37,11 @@ def sauvegarder_rapport(donnees):
         try:
             df = pd.read_csv(DB_FILE)
             
-            # Vérification : existe-t-il déjà un rapport pour cette date et ce shift ?
             if not df.empty and 'Date' in df.columns and 'Shift' in df.columns:
                 doublon_index = df[(df['Date'] == donnees['Date']) & (df['Shift'] == donnees['Shift'])].index
                 if not doublon_index.empty:
                     df = df.drop(doublon_index)
             
-            # Fusion propre des lignes
             df = pd.concat([df, nouveau_df], ignore_index=True, sort=False)
         except Exception:
             df = nouveau_df
@@ -83,7 +80,7 @@ def image_to_base64(uploaded_file):
     return ""
 
 # =========================================================================
-# FONCTION PDF STANDARDISÉE ET UNIVERSELLE
+# FONCTION PDF STANDARDISÉE ET UNIVERSELLE (AVEC PROVENANCE PISCINE)
 # =========================================================================
 def generer_pdf(row, date_texte, shift, espaces_liste):
     pdf = FPDF()
@@ -138,6 +135,15 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
         
     pdf.cell(110, 6, clean_txt("Chambres VIP"), border=1)
     pdf.cell(55, 6, clean_txt(str(int(row.get('VIP', 0)))), border=1, ln=True, align="C")
+    
+    # Ajout de la provenance des réservations Piscine dans le PDF
+    p_eat = int(row.get('Piscine_Eatnow', 0))
+    p_bed = int(row.get('Piscine_Mysonbed', 0))
+    p_dir = int(row.get('Piscine_Direct', 0))
+    p_tot = p_eat + p_bed + p_dir
+    
+    pdf.cell(110, 6, clean_txt(f"Réservations Piscine (Total : {p_tot}) | Eatnow:{p_eat} - MySonBed:{p_bed} - Direct:{p_dir}"), border=1)
+    pdf.cell(55, 6, clean_txt(str(p_tot)), border=1, ln=True, align="C")
     
     liste_rec = safe_load_json(row.get('Reclamations_Detail', '[]'))
     pdf.cell(110, 6, clean_txt("Réclamations clients"), border=1)
@@ -288,6 +294,15 @@ if page == "✍️ Saisir un Rapport":
         with col2:
             vip = st.number_input("Chambres VIP", min_value=0, value=0, key="m_vip_input")
             incidents = st.number_input("Incidents techniques", min_value=0, value=0, key="m_inc_input")
+            
+        st.markdown("#### 🏊‍♂️ Réservations Piscine (Provenance)")
+        cp1, cp2, cp3 = st.columns(3)
+        with cp1:
+            m_piscine_eat = st.number_input("Eatnow", min_value=0, value=0, key="m_p_eat")
+        with cp2:
+            m_piscine_bed = st.number_input("Mysonbed", min_value=0, value=0, key="m_p_bed")
+        with cp3:
+            m_piscine_dir = st.number_input("Direct (Tél / Accueil)", min_value=0, value=0, key="m_p_dir")
 
         st.markdown("---")
         st.subheader("SUIVI DES ESPACES")
@@ -374,6 +389,9 @@ if page == "✍️ Saisir un Rapport":
                 "Departs_Prevus": departs,
                 "VIP": vip,
                 "Incidents_Techniques": incidents,
+                "Piscine_Eatnow": m_piscine_eat,
+                "Piscine_Mysonbed": m_piscine_bed,
+                "Piscine_Direct": m_piscine_dir,
                 "Priorites_Liste": json.dumps(st.session_state.priorites_matin),
                 "Notes_Manager": notes_manager_matin if notes_manager_matin.strip() != "" else "Aucune",
                 "Reclamations_Detail": json.dumps(st.session_state.reclamations_matin)
@@ -415,6 +433,15 @@ if page == "✍️ Saisir un Rapport":
         with col2:
             s_vip = st.number_input("Chambres VIP", min_value=0, value=0, key="s_vip")
             s_incidents = st.number_input("Incidents techniques", min_value=0, value=0, key="s_inc")
+            
+        st.markdown("#### 🏊‍♂️ Réservations Piscine (Provenance)")
+        cps1, cps2, cps3 = st.columns(3)
+        with cps1:
+            s_piscine_eat = st.number_input("Eatnow", min_value=0, value=0, key="s_p_eat")
+        with cps2:
+            s_piscine_bed = st.number_input("Mysonbed", min_value=0, value=0, key="s_p_bed")
+        with cps3:
+            s_piscine_dir = st.number_input("Direct (Tél / Accueil)", min_value=0, value=0, key="s_p_dir")
 
         st.markdown("---")
         st.subheader("SUIVI DES ESPACES")
@@ -489,143 +516,4 @@ if page == "✍️ Saisir un Rapport":
 
         st.markdown("---")
         st.subheader("NOTES MANAGER")
-        notes_manager_soir = st.text_area("Observations générales du soir", placeholder="Saisir vos notes ici...", key="ns_text")
-
-        if st.button("💾 Enregistrer le Rapport Soir", use_container_width=True, key="btn_save_soir"):
-            donnees_soir = {
-                "Date": date_rapport_str,
-                "Shift": "SOIR",
-                "Chambres_Occupees": s_chambres_occ,
-                "Late_Check_In": s_late_check,
-                "Departs_Tardifs": s_departs_tardifs,
-                "VIP": s_vip,
-                "Incidents_Techniques": s_incidents,
-                "Priorites_Liste": json.dumps(st.session_state.priorites_soir),
-                "Notes_Manager": notes_manager_soir if notes_manager_soir.strip() != "" else "Aucune",
-                "Reclamations_Detail": json.dumps(st.session_state.reclamations_soir)
-            }
-            donnees_soir.update(etat_espaces_soir)
-            sauvegarder_rapport(donnees_soir)
-            st.success("🎉 Le rapport du soir a été enregistré / mis à jour avec succès !")
-            
-            st.session_state.reclamations_soir = []
-            st.session_state.priorites_soir = []
-            st.rerun()
-
-# ==========================================
-# PAGE 2 : CONSULTATION ET FILTRAGE AMÉLIORÉ
-# ==========================================
-elif page == "📋 Consulter les Rapports":
-    st.header("📋 Consultation des Rapports")
-    
-    c_date, c_shift = st.columns(2)
-    with c_date:
-        date_selectionnee_dt = st.date_input("📅 Choisir la Date", value=datetime.now().date())
-        date_choisie = date_selectionnee_dt.strftime("%Y-%m-%d")
-        date_fr = date_selectionnee_dt.strftime("%d/%m/%Y")
-    
-    with c_shift:
-        shift_choisi = st.selectbox("⏰ Choisir le Shift", ["MATIN", "SOIR"])
-        
-    st.markdown("---")
-    
-    if not os.path.exists(DB_FILE):
-        st.info("ℹ️ Aucun rapport n'a encore été créé dans l'application.")
-    else:
-        df_consult = pd.read_csv(DB_FILE)
-        
-        if df_consult.empty:
-            st.info("ℹ️ La base de données est vide pour le moment.")
-        else:
-            rapport_selectionne = df_consult[(df_consult['Date'] == date_choisie) & (df_consult['Shift'] == shift_choisi)]
-            
-            if rapport_selectionne.empty:
-                st.warning(f"⚠️ Aucun rapport n'a été enregistré pour le **{date_fr}** lors du shift **{shift_choisi}**.")
-            else:
-                st.success(f"### 📄 Fiche trouvée : {date_fr} — Shift {shift_choisi}")
-                row = rapport_selectionne.iloc[0]
-                
-                # Génération du PDF
-                pdf_data = generer_pdf(row, date_fr, shift_choisi, espaces)
-                
-                st.download_button(
-                    label="📥 Télécharger le Rapport PDF (Format Papier)",
-                    data=pdf_data,
-                    file_name=f"Rapport_{shift_choisi}_{date_choisie}.pdf",
-                    mime="application/pdf",
-                    use_container_width=True
-                )
-                
-                st.markdown("---")
-                st.subheader("📊 Résumé des Opérations")
-                if shift_choisi == "MATIN":
-                    c1, c2, c3, c4, c5 = st.columns(5)
-                    c1.metric("Chambres Occ.", int(row.get('Chambres_Occupees', 0)))
-                    c2.metric("Chambres VIP", int(row.get('VIP', 0)))
-                    c3.metric("Arrivées Prév.", int(row.get('Arrivees_Prevues', 0)))
-                    c4.metric("Départs Prév.", int(row.get('Departs_Prevus', 0)))
-                    c5.metric("Incidents Tech.", int(row.get('Incidents_Techniques', 0)))
-                elif shift_choisi == "SOIR":
-                    c1, c2, c3, c4, c5 = st.columns(5)
-                    c1.metric("Chambres Occ.", int(row.get('Chambres_Occupees', 0)))
-                    c2.metric("Chambres VIP", int(row.get('VIP', 0)))
-                    c3.metric("Late Check-in", int(row.get('Late_Check_In', 0)))
-                    c4.metric("Départs Tard.", int(row.get('Departs_Tardifs', 0)))
-                    c5.metric("Incidents Tech.", int(row.get('Incidents_Techniques', 0)))
-                
-                st.subheader("🔍 Suivi de l'état des espaces")
-                espaces_data = []
-                for esp in espaces:
-                    has_photo_esp = f"{esp}_Photo" in row and not pd.isna(row.get(f"{esp}_Photo")) and str(row.get(f"{esp}_Photo")).strip() != ""
-                    espaces_data.append({
-                        "Espace": esp,
-                        "État": row.get(f"{esp}_Etat", "N/A"),
-                        "Observations": "Aucune" if pd.isna(row.get(f"{esp}_Observations")) or str(row.get(f"{esp}_Observations")).strip().lower() == "nan" or str(row.get(f"{esp}_Observations")).strip() == "" else row.get(f"{esp}_Observations"),
-                        "Intervention": "Aucune" if pd.isna(row.get(f"{esp}_Intervention")) or str(row.get(f"{esp}_Intervention")).strip().lower() == "nan" or str(row.get(f"{esp}_Intervention")).strip() == "" else row.get(f"{esp}_Intervention"),
-                        "Photo": "📸 Oui" if has_photo_esp else "Non"
-                    })
-                st.table(pd.DataFrame(espaces_data))
-                
-                with st.expander("🖼️ Visualiser les photos des espaces communs"):
-                    photo_trouvee = False
-                    for esp in espaces:
-                        img_b64 = row.get(f"{esp}_Photo")
-                        if not pd.isna(img_b64) and str(img_b64).strip() != "":
-                            photo_trouvee = True
-                            try:
-                                st.write(f"**Espace : {esp} ({row.get(f'{esp}_Etat')})**")
-                                img_data = base64.b64decode(img_b64)
-                                image = Image.open(BytesIO(img_data))
-                                st.image(image, width=400)
-                            except:
-                                st.error(f"Erreur d'affichage : {esp}")
-                    if not photo_trouvee:
-                        st.write("Aucune photo disponible pour les espaces.")
-                
-                st.subheader("🚨 Réclamations Clients")
-                liste_rec = safe_load_json(row.get('Reclamations_Detail', '[]'))
-                if liste_rec and len(liste_rec) > 0:
-                    df_table_rec = pd.DataFrame(liste_rec)
-                    if "Photo" in df_table_rec.columns:
-                        df_table_rec["Photo"] = df_table_rec["Photo"].apply(lambda x: "📸 Oui" if x else "Non")
-                    st.table(df_table_rec)
-                else:
-                    st.write("✓ Aucune réclamation.")
-
-                st.markdown("---")
-                titre_prio_interface = "📌 Priorités pour le Shift Soir" if shift_choisi == "MATIN" else "📌 Priorités pour la Nuit"
-                st.subheader(titre_prio_interface)
-                liste_prio = safe_load_json(row.get('Priorites_Liste', '[]'))
-                if liste_prio and len(liste_prio) > 0:
-                    for idx, p in enumerate(liste_prio, 1):
-                        st.write(f"**{idx}.** {p}")
-                else:
-                    st.write("_Aucune priorité enregistrée._")
-                
-                st.markdown("---")
-                st.subheader("📝 Notes du Manager")
-                notes = row.get('Notes_Manager', 'Aucune')
-                if pd.isna(notes) or str(notes).strip() == "" or str(notes).strip().lower() == "nan" or str(notes).strip() == "Aucune":
-                    st.write("_Aucune note générale rédigée pour ce shift._")
-                else:
-                    st.info(notes)
+        notes_manager_soir = st.text_area("Observations générales du soir",
