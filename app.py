@@ -35,7 +35,7 @@ def sauvegarder_rapport(donnees):
         
     df.to_csv(DB_FILE, index=False, encoding='utf-8-sig')
 
-# Fonction pour nettoyer les textes
+# Fonction pour nettoyer les textes pour FPDF (compatibilité latin-1)
 def clean_txt(valeur):
     if pd.isna(valeur) or str(valeur).strip().lower() == "nan" or str(valeur).strip() == "":
         return "Aucune"
@@ -64,119 +64,90 @@ def image_to_base64(uploaded_file):
             return ""
     return ""
 
-# Fonction pour générer le PDF propre
+# =========================================================================
+# FONCTION PDF CORRIGÉE : RESPECTE L'ORDRE ET LE DESIGN DE VOS FICHES PAPIER
+# =========================================================================
 def generer_pdf(row, date_texte, shift, espaces_liste):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_margins(15, 15, 15)
     
-    # --- EN-TÊTE ---
+    # Couleurs du thème (Inspiré de votre logo Marron/Beige)
+    c_titre = (94, 80, 63)      # Marron foncé élégant
+    c_texte = (40, 40, 40)      # Presque noir pour la lisibilité
+    c_gris_clair = (245, 242, 238) # Fond de cellule beige très clair
+    
+    # --- 1. EN-TÊTE ---
     pdf.set_font("Helvetica", "B", 18)
-    pdf.set_text_color(44, 62, 80)
-    pdf.cell(0, 10, clean_txt("LES PALMIERS BOUTIQUE HOTEL & SPA"), ln=True, align="C")
+    pdf.set_text_color(*c_titre)
+    pdf.cell(0, 10, clean_txt(f"{shift} SHIFT MANAGER REPORT"), ln=True, align="L")
     
-    pdf.set_font("Helvetica", "B", 14)
-    pdf.set_text_color(127, 140, 141)
-    pdf.cell(0, 10, clean_txt(f"Rapport de Shift - {shift}"), ln=True, align="C")
-    pdf.cell(0, 5, clean_txt(f"Date : {date_texte}"), ln=True, align="C")
-    pdf.ln(10)
-    
-    # --- RÉSUMÉ DES OPÉRATIONS ---
     pdf.set_font("Helvetica", "B", 12)
-    pdf.set_text_color(44, 62, 80)
-    pdf.cell(0, 8, clean_txt("1. Résumé des Opérations"), ln=True)
-    pdf.line(15, pdf.get_y(), 195, pdf.get_y())
-    pdf.ln(3)
+    pdf.set_text_color(120, 120, 120)
+    pdf.cell(0, 6, clean_txt("Les Palmiers Boutique Hotel & Spa"), ln=True, align="L")
     
     pdf.set_font("Helvetica", "", 10)
-    pdf.set_text_color(0, 0, 0)
+    pdf.set_text_color(*c_texte)
+    pdf.cell(40, 6, clean_txt(f"Date : {date_texte}"), ln=False)
+    pdf.cell(40, 6, clean_txt(f"Shift : {shift}"), ln=True)
+    pdf.ln(5)
     
-    pdf.cell(70, 6, clean_txt(f"- Chambres occupées : {int(row.get('Chambres_Occupees', 0))}"), ln=False)
-    pdf.cell(70, 6, clean_txt(f"- Chambres VIP : {int(row.get('VIP', 0))}"), ln=True)
+    # --- 2. OPÉRATIONS DU JOUR (Tableau complet identique à votre modèle) ---
+    pdf.set_font("Helvetica", "B", 13)
+    pdf.set_text_color(*c_titre)
+    pdf.cell(0, 8, clean_txt("OPÉRATIONS DU JOUR"), ln=True)
+    pdf.ln(1)
     
+    # En-tête du tableau Opérations
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.set_fill_color(*c_gris_clair)
+    pdf.cell(110, 7, clean_txt("Informations"), border=1, fill=True)
+    pdf.cell(55, 7, clean_txt("Total"), border=1, ln=True, align="C")
+    
+    pdf.set_font("Helvetica", "", 10)
+    # Ligne 1 : Chambres occupées
+    pdf.cell(110, 6, clean_txt("Chambres occupées"), border=1)
+    pdf.cell(55, 6, clean_txt(str(int(row.get('Chambres_Occupees', 0)))), border=1, ln=True, align="C")
+    
+    # Ligne 2 & 3 dynamiques selon le shift (Arrivées/Départs ou Late Check/Tardifs)
     if shift == "MATIN":
-        pdf.cell(70, 6, clean_txt(f"- Arrivées prévues : {int(row.get('Arrivees_Prevues', 0))}"), ln=False)
-        pdf.cell(70, 6, clean_txt(f"- Départs prévus : {int(row.get('Departs_Prevus', 0))}"), ln=True)
+        pdf.cell(110, 6, clean_txt("Arrivées prévues"), border=1)
+        pdf.cell(55, 6, clean_txt(str(int(row.get('Arrivees_Prevues', 0)))), border=1, ln=True, align="C")
+        pdf.cell(110, 6, clean_txt("Départs prévus"), border=1)
+        pdf.cell(55, 6, clean_txt(str(int(row.get('Departs_Prevus', 0)))), border=1, ln=True, align="C")
     else:
-        pdf.cell(70, 6, clean_txt(f"- Late Check-in : {int(row.get('Late_Check_In', 0))}"), ln=False)
-        pdf.cell(70, 6, clean_txt(f"- Départs tardifs : {int(row.get('Departs_Tardifs', 0))}"), ln=True)
+        pdf.cell(110, 6, clean_txt("Late Check-in"), border=1)
+        pdf.cell(55, 6, clean_txt(str(int(row.get('Late_Check_In', 0)))), border=1, ln=True, align="C")
+        pdf.cell(110, 6, clean_txt("Départs tardifs"), border=1)
+        pdf.cell(55, 6, clean_txt(str(int(row.get('Departs_Tardifs', 0)))), border=1, ln=True, align="C")
         
-    pdf.cell(70, 6, clean_txt(f"- Incidents techniques : {int(row.get('Incidents_Techniques', 0))}"), ln=True)
-    pdf.ln(6)
+    # Ligne 4 : Chambres VIP
+    pdf.cell(110, 6, clean_txt("Chambres VIP"), border=1)
+    pdf.cell(55, 6, clean_txt(str(int(row.get('VIP', 0)))), border=1, ln=True, align="C")
     
-    # --- RÉCLAMATIONS CLIENTS ---
-    pdf.set_font("Helvetica", "B", 12)
-    pdf.set_text_color(44, 62, 80)
-    pdf.cell(0, 8, clean_txt("2. Réclamations Clients"), ln=True)
-    pdf.line(15, pdf.get_y(), 195, pdf.get_y())
-    pdf.ln(3)
-    
+    # Ligne 5 : Réclamations clients (Nombre total d'éléments dans le JSON)
     liste_rec = safe_load_json(row.get('Reclamations_Detail', '[]'))
-        
-    if liste_rec and len(liste_rec) > 0:
-        pdf.set_font("Helvetica", "B", 9)
-        pdf.cell(20, 6, clean_txt("Heure"), border=1, align="C")
-        pdf.cell(35, 6, clean_txt("Chambre / Client"), border=1)
-        pdf.cell(60, 6, clean_txt("Sujet"), border=1)
-        pdf.cell(65, 6, clean_txt("Action prise"), border=1, ln=True)
-        
-        pdf.set_font("Helvetica", "", 9)
-        for rec in liste_rec:
-            pdf.cell(20, 6, clean_txt(rec.get('Heure','')), border=1, align="C")
-            pdf.cell(35, 6, clean_txt(rec.get('Chambre',''))[:20], border=1)
-            pdf.cell(60, 6, clean_txt(rec.get('Sujet',''))[:35], border=1)
-            pdf.cell(65, 6, clean_txt(rec.get('Action',''))[:38], border=1, ln=True)
-    else:
-        pdf.set_font("Helvetica", "I", 10)
-        pdf.cell(0, 6, clean_txt("Aucune réclamation sur ce shift."), ln=True)
-    pdf.ln(6)
+    pdf.cell(110, 6, clean_txt("Réclamations clients"), border=1)
+    pdf.cell(55, 6, clean_txt(str(len(liste_rec))), border=1, ln=True, align="C")
     
-    # --- PRIORITÉS TRANSMISES ---
-    pdf.set_font("Helvetica", "B", 12)
-    pdf.set_text_color(44, 62, 80)
-    pdf.cell(0, 8, clean_txt("3. Priorités Transmises"), ln=True)
-    pdf.line(15, pdf.get_y(), 195, pdf.get_y())
-    pdf.ln(3)
+    # Ligne 6 : Incidents techniques
+    pdf.cell(110, 6, clean_txt("Incidents techniques"), border=1)
+    pdf.cell(55, 6, clean_txt(str(int(row.get('Incidents_Techniques', 0)))), border=1, ln=True, align="C")
     
-    liste_prio = safe_load_json(row.get('Priorites_Liste', '[]'))
-        
-    if liste_prio and len(liste_prio) > 0:
-        pdf.set_font("Helvetica", "", 10)
-        for idx, p in enumerate(liste_prio, 1):
-            pdf.multi_cell(0, 6, clean_txt(f"{idx}. {p}"))
-    else:
-        pdf.set_font("Helvetica", "I", 10)
-        pdf.cell(0, 6, clean_txt("Aucune priorité spécifique enregistrée."), ln=True)
-    pdf.ln(6)
+    pdf.ln(8)
     
-    # --- NOTES MANAGER ---
-    pdf.set_font("Helvetica", "B", 12)
-    pdf.set_text_color(44, 62, 80)
-    pdf.cell(0, 8, clean_txt("4. Notes du Manager"), ln=True)
-    pdf.line(15, pdf.get_y(), 195, pdf.get_y())
-    pdf.ln(3)
-    
-    notes = row.get('Notes_Manager', '')
-    if pd.isna(notes) or str(notes).strip() == "" or str(notes).strip().lower() == "nan":
-        pdf.set_font("Helvetica", "I", 10)
-        pdf.cell(0, 6, clean_txt("Aucune observation générale rédigée."), ln=True)
-    else:
-        pdf.set_font("Helvetica", "", 10)
-        pdf.multi_cell(0, 6, clean_txt(notes))
-    pdf.ln(6)
-    
-    # --- ÉTAT DES ESPACES ---
-    pdf.set_font("Helvetica", "B", 12)
-    pdf.set_text_color(44, 62, 80)
-    pdf.cell(0, 8, clean_txt("5. Suivi des Espaces Communs"), ln=True)
-    pdf.line(15, pdf.get_y(), 195, pdf.get_y())
-    pdf.ln(3)
+    # --- 3. SUIVI DES ESPACES (Grand tableau central de votre fiche) ---
+    pdf.set_font("Helvetica", "B", 13)
+    pdf.set_text_color(*c_titre)
+    pdf.cell(0, 8, clean_txt("SUIVI DES ESPACES"), ln=True)
+    pdf.ln(1)
     
     pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(45, 6, clean_txt("Espace"), border=1)
-    pdf.cell(20, 6, clean_txt("État"), border=1, align="C")
-    pdf.cell(60, 6, clean_txt("Observations"), border=1)
-    pdf.cell(55, 6, clean_txt("Intervention"), border=1, ln=True)
+    pdf.set_fill_color(*c_gris_clair)
+    pdf.cell(45, 7, clean_txt("Espace"), border=1, fill=True)
+    pdf.cell(20, 7, clean_txt("État"), border=1, fill=True, align="C")
+    pdf.cell(55, 7, clean_txt("Observations"), border=1, fill=True)
+    pdf.cell(45, 7, clean_txt("Intervention nécessaire"), border=1, fill=True, ln=True)
     
     pdf.set_font("Helvetica", "", 9)
     for esp in espaces_liste:
@@ -185,23 +156,90 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
         raw_etat = row.get(f"{esp}_Etat", "OK")
         etat_val = "Alerte" if str(raw_etat).strip().lower() == "alerte" else "OK"
         
+        # Coloration astucieuse de l'état
         if etat_val == "Alerte":
-            pdf.set_text_color(231, 76, 60)
+            pdf.set_text_color(211, 47, 47) # Rouge alerte
         else:
-            pdf.set_text_color(46, 204, 113)
+            pdf.set_text_color(56, 142, 60)  # Vert ok
             
         pdf.cell(20, 6, clean_txt(etat_val), border=1, align="C")
-        pdf.set_text_color(0, 0, 0)
+        pdf.set_text_color(*c_texte) # Reset couleur
         
         obs_val = clean_txt(row.get(f"{esp}_Observations", "Aucune"))
         interv_val = clean_txt(row.get(f"{esp}_Intervention", "Aucune"))
         
-        pdf.cell(60, 6, obs_val[:35], border=1)
-        pdf.cell(55, 6, interv_val[:32], border=1, ln=True)
+        pdf.cell(55, 6, obs_val[:32], border=1)
+        pdf.cell(45, 6, interv_val[:25], border=1, ln=True)
         
+    pdf.ln(8)
+    
+    # --- 4. RÉCLAMATIONS CLIENTS (Page 2 de votre modèle papier) ---
+    pdf.set_font("Helvetica", "B", 13)
+    pdf.set_text_color(*c_titre)
+    pdf.cell(0, 8, clean_txt("RÉCLAMATIONS CLIENTS"), ln=True)
+    pdf.ln(1)
+    
+    if liste_rec and len(liste_rec) > 0:
+        pdf.set_font("Helvetica", "B", 9)
+        pdf.set_fill_color(*c_gris_clair)
+        pdf.cell(20, 7, clean_txt("Heure"), border=1, fill=True, align="C")
+        pdf.cell(35, 7, clean_txt("Chambre / Client"), border=1, fill=True)
+        pdf.cell(55, 7, clean_txt("Sujet"), border=1, fill=True)
+        pdf.cell(55, 7, clean_txt("Action prise"), border=1, fill=True, ln=True)
+        
+        pdf.set_font("Helvetica", "", 9)
+        for rec in liste_rec:
+            pdf.cell(20, 6, clean_txt(rec.get('Heure','')), border=1, align="C")
+            pdf.cell(35, 6, clean_txt(rec.get('Chambre',''))[:20], border=1)
+            pdf.cell(55, 6, clean_txt(rec.get('Sujet',''))[:32], border=1)
+            pdf.cell(55, 6, clean_txt(rec.get('Action',''))[:32], border=1, ln=True)
+    else:
+        pdf.set_font("Helvetica", "I", 10)
+        pdf.cell(0, 6, clean_txt("Aucune réclamation signalée sur ce shift."), ln=True)
+        
+    pdf.ln(8)
+    
+    # --- 5. PRIORITÉS TRANSMISES POUR LE SHIFT SUIVANT ---
+    pdf.set_font("Helvetica", "B", 13)
+    pdf.set_text_color(*c_titre)
+    titre_prio = "PRIORITÉS POUR LE SHIFT SOIR" if shift == "MATIN" else "PRIORITÉS POUR LA NUIT"
+    pdf.cell(0, 8, clean_txt(titre_prio), ln=True)
+    pdf.ln(1)
+    
+    liste_prio = safe_load_json(row.get('Priorites_Liste', '[]'))
+    pdf.set_font("Helvetica", "", 10)
+    if liste_prio and len(liste_prio) > 0:
+        for idx, p in enumerate(liste_prio, 1):
+            pdf.multi_cell(0, 6, clean_txt(f"- {p}"))
+    else:
+        pdf.set_font("Helvetica", "I", 10)
+        pdf.cell(0, 6, clean_txt("Aucune priorité spécifique enregistrée."), ln=True)
+        
+    pdf.ln(8)
+    
+    # --- 6. NOTES MANAGER & SIGNATURE ---
+    pdf.set_font("Helvetica", "B", 13)
+    pdf.set_text_color(*c_titre)
+    pdf.cell(0, 8, clean_txt("NOTES MANAGER"), ln=True)
+    pdf.ln(1)
+    
+    notes = row.get('Notes_Manager', '')
+    pdf.set_font("Helvetica", "", 10)
+    if pd.isna(notes) or str(notes).strip() == "" or str(notes).strip().lower() == "nan":
+        pdf.set_font("Helvetica", "I", 10)
+        pdf.cell(0, 6, clean_txt("Aucune observation générale rédigée."), ln=True)
+    else:
+        pdf.multi_cell(0, 6, clean_txt(notes))
+        
+    # Bloc Signature en bas
+    pdf.ln(15)
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.cell(120, 6, "", ln=False)
+    pdf.cell(45, 6, clean_txt("Signature :"), ln=True, align="L")
+    
     return pdf.output()
 
-# --- CONFIGURATION STREAMLIT ---
+# --- RESTE DE LA CONFIGURATION STREAMLIT ---
 icon_param = LOGO_FILE if os.path.exists(LOGO_FILE) else "📝"
 st.set_page_config(page_title="Les Palmiers - Rapports", page_icon=icon_param, layout="centered")
 
@@ -258,7 +296,6 @@ if page == "✍️ Saisir un Rapport":
             with c3:
                 interv = st.text_input("Intervention nécessaire", placeholder="Aucune", key=f"matin_int_{espace}")
             
-            # Ajout du champ photo pour l'espace
             photo_espace = st.file_uploader("📷 Photo de l'espace (Optionnel)", type=["jpg", "jpeg", "png"], key=f"matin_photo_{espace}")
             
             etat_espaces_matin[f"{espace}_Etat"] = etat
@@ -304,7 +341,7 @@ if page == "✍️ Saisir un Rapport":
                 st.rerun()
 
         st.markdown("---")
-        st.subheader("PRIORITÉS POUR LE MATIN")
+        st.subheader("PRIORITÉS POUR LE SOIR")
         with st.form("form_prio_matin", clear_on_submit=True):
             nouvelle_prio_m = st.text_input("Rédiger une priorité pour le soir...", placeholder="Ex: Donner la clé de la 10...")
             submit_prio_m = st.form_submit_button("➕ Ajouter cette priorité", use_container_width=True)
@@ -388,7 +425,6 @@ if page == "✍️ Saisir un Rapport":
             with c3:
                 interv = st.text_input("Intervention nécessaire", placeholder="Aucune", key=f"soir_int_{espace}")
             
-            # Ajout du champ photo pour l'espace
             photo_espace = st.file_uploader("📷 Photo de l'espace (Optionnel)", type=["jpg", "jpeg", "png"], key=f"soir_photo_{espace}")
             
             etat_espaces_soir[f"{espace}_Etat"] = etat
@@ -510,11 +546,24 @@ elif page == "📋 Consulter les Rapports":
                 
                 if not rapport_selectionne.empty:
                     st.markdown("---")
-                    st.success(f"### 📄 Rapport du {date_fr} — Shift {shift_choisi}")
+                    st.success(f"### 📄 Aperçu de la fiche du {date_fr} — Shift {shift_choisi}")
                     
-                    st.subheader("📊 Résumé des Opérations")
                     row = rapport_selectionne.iloc[0]
                     
+                    # Bouton d'export PDF placé en haut pour un accès rapide
+                    pdf_data_raw = generer_pdf(row, date_fr, shift_choisi, espaces)
+                    pdf_data = bytes(pdf_data_raw) 
+                    
+                    st.download_button(
+                        label="📥 Télécharger le Rapport PDF (Format Officiel Papier)",
+                        data=pdf_data,
+                        file_name=f"Rapport_{shift_choisi}_{date_choisie}.pdf",
+                        mime="application/pdf",
+                        use_container_width=True
+                    )
+                    
+                    st.markdown("---")
+                    st.subheader("📊 Résumé des Opérations")
                     if shift_choisi == "MATIN":
                         c1, c2, c3, c4, c5 = st.columns(5)
                         c1.metric("Chambres Occ.", int(row.get('Chambres_Occupees', 0)))
@@ -522,7 +571,6 @@ elif page == "📋 Consulter les Rapports":
                         c3.metric("Arrivées Prév.", int(row.get('Arrivees_Prevues', 0)))
                         c4.metric("Départs Prév.", int(row.get('Departs_Prevus', 0)))
                         c5.metric("Incidents Tech.", int(row.get('Incidents_Techniques', 0)))
-                        
                     elif shift_choisi == "SOIR":
                         c1, c2, c3, c4, c5 = st.columns(5)
                         c1.metric("Chambres Occ.", int(row.get('Chambres_Occupees', 0)))
@@ -531,48 +579,6 @@ elif page == "📋 Consulter les Rapports":
                         c4.metric("Départs Tard.", int(row.get('Departs_Tardifs', 0)))
                         c5.metric("Incidents Tech.", int(row.get('Incidents_Techniques', 0)))
                     
-                    st.subheader("🚨 Réclamations Clients")
-                    liste_rec = safe_load_json(row.get('Reclamations_Detail', '[]'))
-                    if liste_rec and len(liste_rec) > 0:
-                        df_table_rec = pd.DataFrame(liste_rec)
-                        has_photos = "Photo" in df_table_rec.columns
-                        
-                        if has_photos:
-                            df_table_print = df_table_rec.copy()
-                            df_table_print["Photo"] = df_table_print["Photo"].apply(lambda x: "📸 Présente" if x else "Aucune")
-                            st.table(df_table_print)
-                        else:
-                            st.table(df_table_rec)
-                        
-                        if has_photos:
-                            with st.expander("🖼️ Visualiser les photos des réclamations"):
-                                for item in liste_rec:
-                                    if item.get("Photo"):
-                                        try:
-                                            st.write(f"**Chambre/Client : {item.get('Chambre')} - Sujet : {item.get('Sujet')}**")
-                                            img_data = base64.b64decode(item["Photo"])
-                                            image = Image.open(BytesIO(img_data))
-                                            st.image(image, width=350)
-                                        except:
-                                            st.error("Impossible d'afficher cette image.")
-                    else:
-                        st.write("✓ Aucune réclamation sur ce shift.")
-                    
-                    st.subheader("📌 Priorités Transmises")
-                    liste_prio = safe_load_json(row.get('Priorites_Liste', '[]'))
-                    if liste_prio and len(liste_prio) > 0:
-                        for idx, p in enumerate(liste_prio, 1):
-                            st.write(f"**{idx}.** {p}")
-                    else:
-                        st.write("✓ Aucune priorité spécifique enregistrée.")
-                    
-                    st.subheader("📝 Notes du Manager")
-                    notes = row.get('Notes_Manager', '')
-                    if pd.isna(notes) or str(notes).strip() == "" or str(notes).strip().lower() == "nan":
-                        st.write("*Aucune observation générale rédigée.*")
-                    else:
-                        st.info(notes)
-                        
                     st.subheader("🔍 Suivi de l'état des espaces")
                     espaces_data = []
                     for esp in espaces:
@@ -582,11 +588,10 @@ elif page == "📋 Consulter les Rapports":
                             "État": row.get(f"{esp}_Etat", "N/A"),
                             "Observations": "Aucune" if pd.isna(row.get(f"{esp}_Observations")) or str(row.get(f"{esp}_Observations")).strip().lower() == "nan" or str(row.get(f"{esp}_Observations")).strip() == "" else row.get(f"{esp}_Observations"),
                             "Intervention": "Aucune" if pd.isna(row.get(f"{esp}_Intervention")) or str(row.get(f"{esp}_Intervention")).strip().lower() == "nan" or str(row.get(f"{esp}_Intervention")).strip() == "" else row.get(f"{esp}_Intervention"),
-                            "Photo intégrée": "📸 Oui" if has_photo_esp else "Non"
+                            "Photo": "📸 Oui" if has_photo_esp else "Non"
                         })
                     st.table(pd.DataFrame(espaces_data))
                     
-                    # Section dédiée pour visionner les photos des espaces
                     with st.expander("🖼️ Visualiser les photos des espaces communs"):
                         photo_trouvee = False
                         for esp in espaces:
@@ -595,25 +600,20 @@ elif page == "📋 Consulter les Rapports":
                                 photo_trouvee = True
                                 try:
                                     st.write(f"**Espace : {esp} ({row.get(f'{esp}_Etat')})**")
-                                    st.write(f"Obs: {row.get(f'{esp}_Observations')}")
                                     img_data = base64.b64decode(img_b64)
                                     image = Image.open(BytesIO(img_data))
                                     st.image(image, width=400)
-                                    st.markdown("---")
                                 except:
-                                    st.error(f"Impossible d'afficher l'image de l'espace : {esp}")
+                                    st.error(f"Erreur d'affichage : {esp}")
                         if not photo_trouvee:
-                            st.write("Aucune photo n'a été ajoutée pour les espaces dans ce shift.")
+                            st.write("Aucune photo disponible pour les espaces.")
                     
-                    st.markdown("---")
-                    
-                    pdf_data_raw = generer_pdf(row, date_fr, shift_choisi, espaces)
-                    pdf_data = bytes(pdf_data_raw) 
-                    
-                    st.download_button(
-                        label="📥 Télécharger le Rapport en PDF",
-                        data=pdf_data,
-                        file_name=f"Rapport_{shift_choisi}_{date_choisie}.pdf",
-                        mime="application/pdf",
-                        use_container_width=True
-                    )
+                    st.subheader("🚨 Réclamations Clients")
+                    liste_rec = safe_load_json(row.get('Reclamations_Detail', '[]'))
+                    if liste_rec and len(liste_rec) > 0:
+                        df_table_rec = pd.DataFrame(liste_rec)
+                        if "Photo" in df_table_rec.columns:
+                            df_table_rec["Photo"] = df_table_rec["Photo"].apply(lambda x: "📸 Oui" if x else "Non")
+                        st.table(df_table_rec)
+                    else:
+                        st.write("✓ Aucune réclamation.")
