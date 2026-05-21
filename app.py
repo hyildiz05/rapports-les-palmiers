@@ -237,7 +237,8 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
     pdf.cell(120, 6, "", ln=False)
     pdf.cell(45, 6, clean_txt("Signature :"), ln=True, align="L")
     
-    return pdf.output()
+    # Correctif crucial : Spécifier la destination 'S' pour retourner un flux d'octets compatible
+    return pdf.output(dest='S')
 
 # --- RESTE DE LA CONFIGURATION STREAMLIT ---
 icon_param = LOGO_FILE if os.path.exists(LOGO_FILE) else "📝"
@@ -550,9 +551,8 @@ elif page == "📋 Consulter les Rapports":
                     
                     row = rapport_selectionne.iloc[0]
                     
-                    # Bouton d'export PDF placé en haut pour un accès rapide
-                    pdf_data_raw = generer_pdf(row, date_fr, shift_choisi, espaces)
-                    pdf_data = bytes(pdf_data_raw) 
+                    # Le correctif applique directement la sortie FPDF (dest='S') au bouton Streamlit
+                    pdf_data = generer_pdf(row, date_fr, shift_choisi, espaces)
                     
                     st.download_button(
                         label="📥 Télécharger le Rapport PDF (Format Officiel Papier)",
