@@ -65,7 +65,7 @@ def image_to_base64(uploaded_file):
     return ""
 
 # =========================================================================
-# FONCTION PDF CORRIGÉE : RESPECTE L'ORDRE ET LE DESIGN DE VOS FICHES PAPIER
+# FONCTION PDF CORRIGÉE : SANS PAGE BLANCHE via BytesIO
 # =========================================================================
 def generer_pdf(row, date_texte, shift, espaces_liste):
     pdf = FPDF()
@@ -92,7 +92,7 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
     pdf.cell(40, 6, clean_txt(f"Shift : {shift}"), ln=True)
     pdf.ln(5)
     
-    # --- 2. OPÉRATIONS DU JOUR (Tableau complet identique à votre modèle) ---
+    # --- 2. OPÉRATIONS DU JOUR ---
     pdf.set_font("Helvetica", "B", 13)
     pdf.set_text_color(*c_titre)
     pdf.cell(0, 8, clean_txt("OPÉRATIONS DU JOUR"), ln=True)
@@ -109,7 +109,7 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
     pdf.cell(110, 6, clean_txt("Chambres occupées"), border=1)
     pdf.cell(55, 6, clean_txt(str(int(row.get('Chambres_Occupees', 0)))), border=1, ln=True, align="C")
     
-    # Ligne 2 & 3 dynamiques selon le shift (Arrivées/Départs ou Late Check/Tardifs)
+    # Ligne 2 & 3 dynamiques selon le shift
     if shift == "MATIN":
         pdf.cell(110, 6, clean_txt("Arrivées prévues"), border=1)
         pdf.cell(55, 6, clean_txt(str(int(row.get('Arrivees_Prevues', 0)))), border=1, ln=True, align="C")
@@ -125,7 +125,7 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
     pdf.cell(110, 6, clean_txt("Chambres VIP"), border=1)
     pdf.cell(55, 6, clean_txt(str(int(row.get('VIP', 0)))), border=1, ln=True, align="C")
     
-    # Ligne 5 : Réclamations clients (Nombre total d'éléments dans le JSON)
+    # Ligne 5 : Réclamations clients
     liste_rec = safe_load_json(row.get('Reclamations_Detail', '[]'))
     pdf.cell(110, 6, clean_txt("Réclamations clients"), border=1)
     pdf.cell(55, 6, clean_txt(str(len(liste_rec))), border=1, ln=True, align="C")
@@ -136,7 +136,7 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
     
     pdf.ln(8)
     
-    # --- 3. SUIVI DES ESPACES (Grand tableau central de votre fiche) ---
+    # --- 3. SUIVI DES ESPACES ---
     pdf.set_font("Helvetica", "B", 13)
     pdf.set_text_color(*c_titre)
     pdf.cell(0, 8, clean_txt("SUIVI DES ESPACES"), ln=True)
@@ -156,14 +156,13 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
         raw_etat = row.get(f"{esp}_Etat", "OK")
         etat_val = "Alerte" if str(raw_etat).strip().lower() == "alerte" else "OK"
         
-        # Coloration astucieuse de l'état
         if etat_val == "Alerte":
-            pdf.set_text_color(211, 47, 47) # Rouge alerte
+            pdf.set_text_color(211, 47, 47) 
         else:
-            pdf.set_text_color(56, 142, 60)  # Vert ok
+            pdf.set_text_color(56, 142, 60)  
             
         pdf.cell(20, 6, clean_txt(etat_val), border=1, align="C")
-        pdf.set_text_color(*c_texte) # Reset couleur
+        pdf.set_text_color(*c_texte) 
         
         obs_val = clean_txt(row.get(f"{esp}_Observations", "Aucune"))
         interv_val = clean_txt(row.get(f"{esp}_Intervention", "Aucune"))
@@ -173,7 +172,7 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
         
     pdf.ln(8)
     
-    # --- 4. RÉCLAMATIONS CLIENTS (Page 2 de votre modèle papier) ---
+    # --- 4. RÉCLAMATIONS CLIENTS ---
     pdf.set_font("Helvetica", "B", 13)
     pdf.set_text_color(*c_titre)
     pdf.cell(0, 8, clean_txt("RÉCLAMATIONS CLIENTS"), ln=True)
@@ -199,7 +198,7 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
         
     pdf.ln(8)
     
-    # --- 5. PRIORITÉS TRANSMISES POUR LE SHIFT SUIVANT ---
+    # --- 5. PRIORITÉS TRANSMISES ---
     pdf.set_font("Helvetica", "B", 13)
     pdf.set_text_color(*c_titre)
     titre_prio = "PRIORITÉS POUR LE SHIFT SOIR" if shift == "MATIN" else "PRIORITÉS POUR LA NUIT"
@@ -231,14 +230,16 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
     else:
         pdf.multi_cell(0, 6, clean_txt(notes))
         
-    # Bloc Signature en bas
     pdf.ln(15)
     pdf.set_font("Helvetica", "B", 10)
     pdf.cell(120, 6, "", ln=False)
     pdf.cell(45, 6, clean_txt("Signature :"), ln=True, align="L")
     
-    # Correctif crucial : Spécifier la destination 'S' pour retourner un flux d'octets compatible
-    return pdf.output(dest='S')
+    # Solution ultime anti-page blanche : passer par un flux BytesIO local
+    buffer = BytesIO()
+    pdf.output(dest='F', name=buffer)
+    buffer.seek(0)
+    return buffer.getvalue()
 
 # --- RESTE DE LA CONFIGURATION STREAMLIT ---
 icon_param = LOGO_FILE if os.path.exists(LOGO_FILE) else "📝"
@@ -551,7 +552,7 @@ elif page == "📋 Consulter les Rapports":
                     
                     row = rapport_selectionne.iloc[0]
                     
-                    # Le correctif applique directement la sortie FPDF (dest='S') au bouton Streamlit
+                    # Récupération sécurisée du flux d'octets généré via BytesIO
                     pdf_data = generer_pdf(row, date_fr, shift_choisi, espaces)
                     
                     st.download_button(
