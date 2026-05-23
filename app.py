@@ -80,7 +80,7 @@ def image_to_base64(uploaded_file):
     return ""
 
 # =========================================================================
-# FONCTION PDF STANDARDISÉE ET UNIVERSELLE (AVEC PROVENANCE PISCINE)
+# FONCTION PDF STANDARDISÉE ET UNIVERSELLE
 # =========================================================================
 def generer_pdf(row, date_texte, shift, espaces_liste):
     pdf = FPDF()
@@ -136,22 +136,36 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
     pdf.cell(110, 6, clean_txt("Chambres VIP"), border=1)
     pdf.cell(55, 6, clean_txt(str(int(row.get('VIP', 0)))), border=1, ln=True, align="C")
     
-    # Ajout de la provenance des réservations Piscine (avec Marrakech For You)
-    p_eat = int(row.get('Piscine_Eatnow', 0))
-    p_bed = int(row.get('Piscine_Mysonbed', 0))
-    p_mfy = int(row.get('Piscine_MarrakechForYou', 0))
-    p_dir = int(row.get('Piscine_Direct', 0))
-    p_tot = p_eat + p_bed + p_mfy + p_dir
-    
-    pdf.cell(110, 6, clean_txt(f"Réservations Piscine (Total : {p_tot}) | Eatnow:{p_eat} - MySonBed:{p_bed} - MFY:{p_mfy} - Direct:{p_dir}"), border=1)
-    pdf.cell(55, 6, clean_txt(str(p_tot)), border=1, ln=True, align="C")
-    
     liste_rec = safe_load_json(row.get('Reclamations_Detail', '[]'))
     pdf.cell(110, 6, clean_txt("Réclamations clients"), border=1)
     pdf.cell(55, 6, clean_txt(str(len(liste_rec))), border=1, ln=True, align="C")
     
     pdf.cell(110, 6, clean_txt("Incidents techniques"), border=1)
     pdf.cell(55, 6, clean_txt(str(int(row.get('Incidents_Techniques', 0)))), border=1, ln=True, align="C")
+    
+    # --- ESPACE APRES INCIDENTS : LES DETAILS DE LA PISCINE ---
+    p_eat = int(row.get('Piscine_Eatnow', 0))
+    p_bed = int(row.get('Piscine_Mysonbed', 0))
+    p_mfy = int(row.get('Piscine_MarrakechForYou', 0))
+    p_dir = int(row.get('Piscine_Direct', 0))
+    p_tot = p_eat + p_bed + p_mfy + p_dir
+    
+    pdf.cell(110, 6, clean_txt("Réservations Piscine - Eatnow"), border=1)
+    pdf.cell(55, 6, clean_txt(str(p_eat)), border=1, ln=True, align="C")
+    
+    pdf.cell(110, 6, clean_txt("Réservations Piscine - Mysonbed"), border=1)
+    pdf.cell(55, 6, clean_txt(str(p_bed)), border=1, ln=True, align="C")
+    
+    pdf.cell(110, 6, clean_txt("Réservations Piscine - Marrakech For You"), border=1)
+    pdf.cell(55, 6, clean_txt(str(p_mfy)), border=1, ln=True, align="C")
+    
+    pdf.cell(110, 6, clean_txt("Réservations Piscine - Direct"), border=1)
+    pdf.cell(55, 6, clean_txt(str(p_dir)), border=1, ln=True, align="C")
+    
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.cell(110, 6, clean_txt("TOTAL RÉSERVATIONS PISCINE"), border=1)
+    pdf.cell(55, 6, clean_txt(str(p_tot)), border=1, ln=True, align="C")
+    pdf.set_font("Helvetica", "", 10)
     
     pdf.ln(8)
     
@@ -665,18 +679,3 @@ elif page == "📋 Consulter les Rapports":
                     st.table(df_table_rec)
                 else:
                     st.write("✓ Aucune réclamation.")
-
-                st.markdown("---")
-                titre_prio_interface = "📌 Priorités pour le Shift Soir" if shift_choisi == "MATIN" else "📌 Priorités pour la Nuit"
-                st.subheader(titre_prio_interface)
-                liste_prio = safe_load_json(row.get('Priorites_Liste', '[]'))
-                if liste_prio and len(liste_prio) > 0:
-                    for idx, p in enumerate(liste_prio, 1):
-                        st.write(f"**{idx}.** {p}")
-                else:
-                    st.write("_Aucune priorité enregistrée._")
-                
-                st.markdown("---")
-                st.subheader("📝 Notes du Manager")
-                notes = row.get('Notes_Manager', 'Aucune')
-                st.write(notes)
