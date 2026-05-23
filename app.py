@@ -144,7 +144,7 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
     pdf.cell(55, 6, clean_txt(str(int(row.get('Incidents_Techniques', 0)))), border=1, ln=True, align="C")
     pdf.ln(8)
     
-    # --- 3. RÉSERVATIONS PISCINE (NOUVELLE SECTION SÉPARÉE) ---
+    # --- 3. RÉSERVATIONS PISCINE ---
     pdf.set_font("Helvetica", "B", 13)
     pdf.set_text_color(*c_titre)
     pdf.cell(0, 8, clean_txt("RÉSERVATIONS PISCINE"), ln=True)
@@ -337,7 +337,7 @@ if page == "✍️ Saisir un Rapport":
             incidents = st.number_input("Incidents techniques", min_value=0, value=0, key="m_inc_input")
             
         st.markdown("---")
-        st.subheader("🏖️ Réservations Piscine")
+        st.subheader("Réservations Piscine")
         cp1, cp2, cp3, cp4 = st.columns(4)
         with cp1:
             m_piscine_eat = st.number_input("Eatnow", min_value=0, value=0, key="m_p_eat")
@@ -483,7 +483,7 @@ if page == "✍️ Saisir un Rapport":
             s_incidents = st.number_input("Incidents techniques", min_value=0, value=0, key="s_inc")
             
         st.markdown("---")
-        st.subheader("🏖️ Réservations Piscine")
+        st.subheader("Présentation Piscine")
         cps1, cps2, cps3, cps4 = st.columns(4)
         with cps1:
             s_piscine_eat = st.number_input("Eatnow", min_value=0, value=0, key="s_p_eat")
@@ -628,7 +628,7 @@ if page == "✍️ Saisir un Rapport":
             n_incidents = st.number_input("Incidents techniques", min_value=0, value=0, key="n_inc")
             
         st.markdown("---")
-        st.subheader("🏖️ Réservations Piscine")
+        st.subheader("Réservations Piscine")
         cpn1, cpn2, cpn3, cpn4 = st.columns(4)
         with cpn1:
             n_piscine_eat = st.number_input("Eatnow", min_value=0, value=0, key="n_p_eat")
@@ -772,7 +772,7 @@ elif page == "📋 Consulter les Rapports":
                 st.success(f"### 📄 Fiche trouvée : {date_fr} — Shift {shift_choisi}")
                 row = rapport_selectionne.iloc[0]
                 
-                # Génération du PDF (avec la nouvelle structure ordonnée)
+                # Génération du PDF
                 pdf_data = generer_pdf(row, date_fr, shift_choisi, espaces)
                 
                 st.download_button(
@@ -804,14 +804,14 @@ elif page == "📋 Consulter les Rapports":
                 
                 st.markdown("---")
                 
-                # 2. Section séparée Réservations Piscine (Placée exactement ICI)
+                # 2. Section séparée Réservations Piscine
                 p_eat = int(row.get('Piscine_Eatnow', 0))
                 p_bed = int(row.get('Piscine_Mysonbed', 0))
                 p_mfy = int(row.get('Piscine_MarrakechForYou', 0))
                 p_dir = int(row.get('Piscine_Direct', 0))
                 total_piscine = p_eat + p_bed + p_mfy + p_dir
                 
-                st.subheader(f"🏖️ Réservations Piscine (Total : {total_piscine})")
+                st.subheader(f"Réservations Piscine (Total : {total_piscine})")
                 cp_aff1, cp_aff2, cp_aff3, cp_aff4 = st.columns(4)
                 cp_aff1.metric("Eatnow", p_eat)
                 cp_aff2.metric("Mysonbed", p_bed)
