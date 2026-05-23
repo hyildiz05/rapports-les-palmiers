@@ -144,42 +144,45 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
     pdf.cell(55, 6, clean_txt(str(int(row.get('Incidents_Techniques', 0)))), border=1, ln=True, align="C")
     pdf.ln(8)
     
-    # --- 3. RÉSERVATIONS PISCINE ---
-    pdf.set_font("Helvetica", "B", 13)
-    pdf.set_text_color(*c_titre)
-    pdf.cell(0, 8, clean_txt("RÉSERVATIONS PISCINE"), ln=True)
-    pdf.ln(1)
-    
-    p_eat = int(row.get('Piscine_Eatnow', 0))
-    p_bed = int(row.get('Piscine_Mysonbed', 0))
-    p_mfy = int(row.get('Piscine_MarrakechForYou', 0))
-    p_dir = int(row.get('Piscine_Direct', 0))
-    p_tot = p_eat + p_bed + p_mfy + p_dir
-    
-    pdf.set_font("Helvetica", "B", 10)
-    pdf.set_fill_color(*c_gris_clair)
-    pdf.cell(110, 7, clean_txt("Provenance"), border=1, fill=True)
-    pdf.cell(55, 7, clean_txt("Nombre"), border=1, ln=True, align="C")
-    
-    pdf.set_font("Helvetica", "", 10)
-    pdf.cell(110, 6, clean_txt("Eatnow"), border=1)
-    pdf.cell(55, 6, clean_txt(str(p_eat)), border=1, ln=True, align="C")
-    
-    pdf.cell(110, 6, clean_txt("Mysonbed"), border=1)
-    pdf.cell(55, 6, clean_txt(str(p_bed)), border=1, ln=True, align="C")
-    
-    pdf.cell(110, 6, clean_txt("Marrakech For You"), border=1)
-    pdf.cell(55, 6, clean_txt(str(p_mfy)), border=1, ln=True, align="C")
-    
-    pdf.cell(110, 6, clean_txt("Direct (Tél / Accueil)"), border=1)
-    pdf.cell(55, 6, clean_txt(str(p_dir)), border=1, ln=True, align="C")
-    
-    pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(110, 6, clean_txt("TOTAL RÉSERVATIONS PISCINE"), border=1)
-    pdf.cell(55, 6, clean_txt(str(p_tot)), border=1, ln=True, align="C")
-    pdf.set_font("Helvetica", "", 10)
-    
-    pdf.ln(8)
+    # --- 3. RÉSERVATIONS PISCINE (Masqué en NUIT) ---
+    if shift != "NUIT":
+        pdf.set_font("Helvetica", "B", 13)
+        pdf.set_text_color(*c_titre)
+        
+        titre_piscine_pdf = "TOTAL CLIENT PISCINE" if shift == "SOIR" else "RÉSERVATIONS PISCINE"
+        pdf.cell(0, 8, clean_txt(titre_piscine_pdf), ln=True)
+        pdf.ln(1)
+        
+        p_eat = int(row.get('Piscine_Eatnow', 0))
+        p_bed = int(row.get('Piscine_Mysonbed', 0))
+        p_mfy = int(row.get('Piscine_MarrakechForYou', 0))
+        p_dir = int(row.get('Piscine_Direct', 0))
+        p_tot = p_eat + p_bed + p_mfy + p_dir
+        
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_fill_color(*c_gris_clair)
+        pdf.cell(110, 7, clean_txt("Provenance"), border=1, fill=True)
+        pdf.cell(55, 7, clean_txt("Nombre"), border=1, ln=True, align="C")
+        
+        pdf.set_font("Helvetica", "", 10)
+        pdf.cell(110, 6, clean_txt("Eatnow"), border=1)
+        pdf.cell(55, 6, clean_txt(str(p_eat)), border=1, ln=True, align="C")
+        
+        pdf.cell(110, 6, clean_txt("Mysonbed"), border=1)
+        pdf.cell(55, 6, clean_txt(str(p_bed)), border=1, ln=True, align="C")
+        
+        pdf.cell(110, 6, clean_txt("Marrakech For You"), border=1)
+        pdf.cell(55, 6, clean_txt(str(p_mfy)), border=1, ln=True, align="C")
+        
+        pdf.cell(110, 6, clean_txt("Direct (Tél / Accueil)"), border=1)
+        pdf.cell(55, 6, clean_txt(str(p_dir)), border=1, ln=True, align="C")
+        
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.cell(110, 6, clean_txt(f"TOTAL {titre_piscine_pdf}"), border=1)
+        pdf.cell(55, 6, clean_txt(str(p_tot)), border=1, ln=True, align="C")
+        pdf.set_font("Helvetica", "", 10)
+        
+        pdf.ln(8)
     
     # --- 4. SUIVI DES ESPACES ---
     pdf.set_font("Helvetica", "B", 13)
@@ -483,7 +486,7 @@ if page == "✍️ Saisir un Rapport":
             s_incidents = st.number_input("Incidents techniques", min_value=0, value=0, key="s_inc")
             
         st.markdown("---")
-        st.subheader("Présentation Piscine")
+        st.subheader("Total client piscine")  # Libellé mis à jour pour le soir
         cps1, cps2, cps3, cps4 = st.columns(4)
         with cps1:
             s_piscine_eat = st.number_input("Eatnow", min_value=0, value=0, key="s_p_eat")
@@ -595,7 +598,7 @@ if page == "✍️ Saisir un Rapport":
             st.rerun()
 
     # ------------------------------------------
-    # SHIFT NUIT
+    # SHIFT NUIT (Section Piscine retirée)
     # ------------------------------------------
     elif shift == "🌌 Shift NUIT":
         st.header(f"🌌 Night Shift Manager Report — {date_selectionnee.strftime('%d/%m/%Y')}")
@@ -627,18 +630,6 @@ if page == "✍️ Saisir un Rapport":
             n_vip = st.number_input("Chambres VIP", min_value=0, value=0, key="n_vip")
             n_incidents = st.number_input("Incidents techniques", min_value=0, value=0, key="n_inc")
             
-        st.markdown("---")
-        st.subheader("Réservations Piscine")
-        cpn1, cpn2, cpn3, cpn4 = st.columns(4)
-        with cpn1:
-            n_piscine_eat = st.number_input("Eatnow", min_value=0, value=0, key="n_p_eat")
-        with cpn2:
-            n_piscine_bed = st.number_input("Mysonbed", min_value=0, value=0, key="n_p_bed")
-        with cpn3:
-            n_piscine_mfy = st.number_input("Marrakech For You", min_value=0, value=0, key="n_p_mfy")
-        with cpn4:
-            n_piscine_dir = st.number_input("Direct (Tél / Accueil)", min_value=0, value=0, key="n_p_dir")
-
         st.markdown("---")
         st.subheader("SUIVI DES ESPACES")
         etat_espaces_nuit = {}
@@ -723,10 +714,10 @@ if page == "✍️ Saisir un Rapport":
                 "Departs_Tardifs": n_departs_tardifs,
                 "VIP": n_vip,
                 "Incidents_Techniques": n_incidents,
-                "Piscine_Eatnow": n_piscine_eat,
-                "Piscine_Mysonbed": n_piscine_bed,
-                "Piscine_MarrakechForYou": n_piscine_mfy,
-                "Piscine_Direct": n_piscine_dir,
+                "Piscine_Eatnow": 0,
+                "Piscine_Mysonbed": 0,
+                "Piscine_MarrakechForYou": 0,
+                "Piscine_Direct": 0,
                 "Priorites_Liste": json.dumps(st.session_state.priorites_nuit),
                 "Notes_Manager": notes_manager_nuit if notes_manager_nuit.strip() != "" else "Aucune",
                 "Reclamations_Detail": json.dumps(st.session_state.reclamations_nuit)
@@ -804,21 +795,23 @@ elif page == "📋 Consulter les Rapports":
                 
                 st.markdown("---")
                 
-                # 2. Section séparée Réservations Piscine
-                p_eat = int(row.get('Piscine_Eatnow', 0))
-                p_bed = int(row.get('Piscine_Mysonbed', 0))
-                p_mfy = int(row.get('Piscine_MarrakechForYou', 0))
-                p_dir = int(row.get('Piscine_Direct', 0))
-                total_piscine = p_eat + p_bed + p_mfy + p_dir
-                
-                st.subheader(f"Réservations Piscine (Total : {total_piscine})")
-                cp_aff1, cp_aff2, cp_aff3, cp_aff4 = st.columns(4)
-                cp_aff1.metric("Eatnow", p_eat)
-                cp_aff2.metric("Mysonbed", p_bed)
-                cp_aff3.metric("Marrakech For You", p_mfy)
-                cp_aff4.metric("Direct", p_dir)
-                
-                st.markdown("---")
+                # 2. Section séparée Réservations Piscine (Masquée si NUIT)
+                if shift_choisi != "NUIT":
+                    p_eat = int(row.get('Piscine_Eatnow', 0))
+                    p_bed = int(row.get('Piscine_Mysonbed', 0))
+                    p_mfy = int(row.get('Piscine_MarrakechForYou', 0))
+                    p_dir = int(row.get('Piscine_Direct', 0))
+                    total_piscine = p_eat + p_bed + p_mfy + p_dir
+                    
+                    titre_piscine_consult = "Total client piscine" if shift_choisi == "SOIR" else "Réservations Piscine"
+                    st.subheader(f"{titre_piscine_consult} (Total : {total_piscine})")
+                    cp_aff1, cp_aff2, cp_aff3, cp_aff4 = st.columns(4)
+                    cp_aff1.metric("Eatnow", p_eat)
+                    cp_aff2.metric("Mysonbed", p_bed)
+                    cp_aff3.metric("Marrakech For You", p_mfy)
+                    cp_aff4.metric("Direct", p_dir)
+                    
+                    st.markdown("---")
                 
                 # 3. Suivi des espaces
                 st.subheader("🔍 Suivi de l'état des espaces")
