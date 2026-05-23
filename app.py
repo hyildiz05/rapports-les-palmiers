@@ -149,7 +149,7 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
         pdf.set_font("Helvetica", "B", 13)
         pdf.set_text_color(*c_titre)
         
-        titre_piscine_pdf = "TOTAL CLIENT PISCINE" if shift == "SOIR" else "RÉSERVATIONS PISCINE"
+        titre_piscine_pdf = "TOTAL CLIENTS PISCINE" if shift == "SOIR" else "RÉSERVATIONS PISCINE"
         pdf.cell(0, 8, clean_txt(titre_piscine_pdf), ln=True)
         pdf.ln(1)
         
@@ -184,40 +184,41 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
         
         pdf.ln(8)
     
-    # --- 4. SUIVI DES ESPACES ---
-    pdf.set_font("Helvetica", "B", 13)
-    pdf.set_text_color(*c_titre)
-    pdf.cell(0, 8, clean_txt("SUIVI DES ESPACES"), ln=True)
-    pdf.ln(1)
-    
-    pdf.set_font("Helvetica", "B", 9)
-    pdf.set_fill_color(*c_gris_clair)
-    pdf.cell(45, 7, clean_txt("Espace"), border=1, fill=True)
-    pdf.cell(20, 7, clean_txt("État"), border=1, fill=True, align="C")
-    pdf.cell(55, 7, clean_txt("Observations"), border=1, fill=True)
-    pdf.cell(45, 7, clean_txt("Intervention nécessaire"), border=1, fill=True, ln=True)
-    
-    pdf.set_font("Helvetica", "", 9)
-    for esp in espaces_liste:
-        pdf.cell(45, 6, clean_txt(esp), border=1)
-        raw_etat = row.get(f"{esp}_Etat", "OK")
-        etat_val = "Alerte" if str(raw_etat).strip().lower() == "alerte" else "OK"
+    # --- 4. SUIVI DES ESPACES (Masqué en NUIT) ---
+    if shift != "NUIT":
+        pdf.set_font("Helvetica", "B", 13)
+        pdf.set_text_color(*c_titre)
+        pdf.cell(0, 8, clean_txt("SUIVI DES ESPACES"), ln=True)
+        pdf.ln(1)
         
-        if etat_val == "Alerte":
-            pdf.set_text_color(211, 47, 47) 
-        else:
-            pdf.set_text_color(56, 142, 60)  
+        pdf.set_font("Helvetica", "B", 9)
+        pdf.set_fill_color(*c_gris_clair)
+        pdf.cell(45, 7, clean_txt("Espace"), border=1, fill=True)
+        pdf.cell(20, 7, clean_txt("État"), border=1, fill=True, align="C")
+        pdf.cell(55, 7, clean_txt("Observations"), border=1, fill=True)
+        pdf.cell(45, 7, clean_txt("Intervention nécessaire"), border=1, fill=True, ln=True)
+        
+        pdf.set_font("Helvetica", "", 9)
+        for esp in espaces_liste:
+            pdf.cell(45, 6, clean_txt(esp), border=1)
+            raw_etat = row.get(f"{esp}_Etat", "OK")
+            etat_val = "Alerte" if str(raw_etat).strip().lower() == "alerte" else "OK"
             
-        pdf.cell(20, 6, clean_txt(etat_val), border=1, align="C")
-        pdf.set_text_color(*c_texte) 
-        
-        obs_val = clean_txt(row.get(f"{esp}_Observations", "Aucune"))
-        interv_val = clean_txt(row.get(f"{esp}_Intervention", "Aucune"))
-        
-        pdf.cell(55, 6, obs_val[:32], border=1)
-        pdf.cell(45, 6, interv_val[:25], border=1, ln=True)
-        
-    pdf.ln(8)
+            if etat_val == "Alerte":
+                pdf.set_text_color(211, 47, 47) 
+            else:
+                pdf.set_text_color(56, 142, 60)  
+                
+            pdf.cell(20, 6, clean_txt(etat_val), border=1, align="C")
+            pdf.set_text_color(*c_texte) 
+            
+            obs_val = clean_txt(row.get(f"{esp}_Observations", "Aucune"))
+            interv_val = clean_txt(row.get(f"{esp}_Intervention", "Aucune"))
+            
+            pdf.cell(55, 6, obs_val[:32], border=1)
+            pdf.cell(45, 6, interv_val[:25], border=1, ln=True)
+            
+        pdf.ln(8)
     
     # --- 5. RÉCLAMATIONS CLIENTS ---
     pdf.set_font("Helvetica", "B", 13)
@@ -486,7 +487,7 @@ if page == "✍️ Saisir un Rapport":
             s_incidents = st.number_input("Incidents techniques", min_value=0, value=0, key="s_inc")
             
         st.markdown("---")
-        st.subheader("Total client piscine")  # Libellé mis à jour pour le soir
+        st.subheader("Total clients piscine")
         cps1, cps2, cps3, cps4 = st.columns(4)
         with cps1:
             s_piscine_eat = st.number_input("Eatnow", min_value=0, value=0, key="s_p_eat")
@@ -598,7 +599,7 @@ if page == "✍️ Saisir un Rapport":
             st.rerun()
 
     # ------------------------------------------
-    # SHIFT NUIT (Section Piscine retirée)
+    # SHIFT NUIT (Piscine et Suivi des Espaces retirés)
     # ------------------------------------------
     elif shift == "🌌 Shift NUIT":
         st.header(f"🌌 Night Shift Manager Report — {date_selectionnee.strftime('%d/%m/%Y')}")
@@ -630,28 +631,6 @@ if page == "✍️ Saisir un Rapport":
             n_vip = st.number_input("Chambres VIP", min_value=0, value=0, key="n_vip")
             n_incidents = st.number_input("Incidents techniques", min_value=0, value=0, key="n_inc")
             
-        st.markdown("---")
-        st.subheader("SUIVI DES ESPACES")
-        etat_espaces_nuit = {}
-        for espace in espaces:
-            st.write(f"**{espace}**")
-            c1, c2, c3 = st.columns([1.2, 2.4, 2.4])
-            with c1:
-                etat = st.selectbox("État", ["OK", "Alerte"], key=f"nuit_etat_{espace}")
-            with c2:
-                obs = st.text_input("Observations", placeholder="RAS", key=f"nuit_obs_{espace}")
-            with c3:
-                interv = st.text_input("Intervention nécessaire", placeholder="Aucune", key=f"nuit_int_{espace}")
-            
-            photo_espace = st.file_uploader("📷 Photo de l'espace (Optionnel)", type=["jpg", "jpeg", "png"], key=f"nuit_photo_{espace}")
-            
-            etat_espaces_nuit[f"{espace}_Etat"] = etat
-            etat_espaces_nuit[f"{espace}_Observations"] = obs if obs.strip() != "" else "Aucune"
-            etat_espaces_nuit[f"{espace}_Intervention"] = interv if interv.strip() != "" else "Aucune"
-            etat_espaces_nuit[f"{espace}_Photo"] = image_to_base64(photo_espace)
-            
-            st.markdown("<hr style='margin:0.5em 0px;', size='1'>", unsafe_allow_html=True)
-
         st.markdown("---")
         st.subheader("RÉCLAMATIONS CLIENTS")
         with st.form("form_rec_nuit", clear_on_submit=True):
@@ -722,7 +701,13 @@ if page == "✍️ Saisir un Rapport":
                 "Notes_Manager": notes_manager_nuit if notes_manager_nuit.strip() != "" else "Aucune",
                 "Reclamations_Detail": json.dumps(st.session_state.reclamations_nuit)
             }
-            donnees_nuit.update(etat_espaces_nuit)
+            # Initialiser des valeurs vides par défaut pour les espaces en nuit (car absents du formulaire)
+            for esp in espaces:
+                donnees_nuit[f"{esp}_Etat"] = "OK"
+                donnees_nuit[f"{esp}_Observations"] = "Aucune"
+                donnees_nuit[f"{esp}_Intervention"] = "Aucune"
+                donnees_nuit[f"{esp}_Photo"] = ""
+                
             sauvegarder_rapport(donnees_nuit)
             st.success("🎉 Le rapport de la nuit a été enregistré / mis à jour avec succès !")
             
@@ -803,7 +788,7 @@ elif page == "📋 Consulter les Rapports":
                     p_dir = int(row.get('Piscine_Direct', 0))
                     total_piscine = p_eat + p_bed + p_mfy + p_dir
                     
-                    titre_piscine_consult = "Total client piscine" if shift_choisi == "SOIR" else "Réservations Piscine"
+                    titre_piscine_consult = "Total clients piscine" if shift_choisi == "SOIR" else "Réservations Piscine"
                     st.subheader(f"{titre_piscine_consult} (Total : {total_piscine})")
                     cp_aff1, cp_aff2, cp_aff3, cp_aff4 = st.columns(4)
                     cp_aff1.metric("Eatnow", p_eat)
@@ -813,35 +798,37 @@ elif page == "📋 Consulter les Rapports":
                     
                     st.markdown("---")
                 
-                # 3. Suivi des espaces
-                st.subheader("🔍 Suivi de l'état des espaces")
-                espaces_data = []
-                for esp in espaces:
-                    has_photo_esp = f"{esp}_Photo" in row and not pd.isna(row.get(f"{esp}_Photo")) and str(row.get(f"{esp}_Photo")).strip() != ""
-                    espaces_data.append({
-                        "Espace": esp,
-                        "État": row.get(f"{esp}_Etat", "N/A"),
-                        "Observations": "Aucune" if pd.isna(row.get(f"{esp}_Observations")) or str(row.get(f"{esp}_Observations")).strip().lower() == "nan" or str(row.get(f"{esp}_Observations")).strip() == "" else row.get(f"{esp}_Observations"),
-                        "Intervention": "Aucune" if pd.isna(row.get(f"{esp}_Intervention")) or str(row.get(f"{esp}_Intervention")).strip().lower() == "nan" or str(row.get(f"{esp}_Intervention")).strip() == "" else row.get(f"{esp}_Intervention"),
-                        "Photo": "📸 Oui" if has_photo_esp else "Non"
-                    })
-                st.table(pd.DataFrame(espaces_data))
-                
-                with st.expander("🖼️ Visualiser les photos des espaces communs"):
-                    photo_trouvee = False
+                # 3. Suivi des espaces (Masqué si NUIT)
+                if shift_choisi != "NUIT":
+                    st.subheader("🔍 Suivi de l'état des espaces")
+                    espaces_data = []
                     for esp in espaces:
-                        img_b64 = row.get(f"{esp}_Photo")
-                        if not pd.isna(img_b64) and str(img_b64).strip() != "":
-                            photo_trouvee = True
-                            try:
-                                st.write(f"**Espace : {esp} ({row.get(f'{esp}_Etat')})**")
-                                img_data = base64.b64decode(img_b64)
-                                image = Image.open(BytesIO(img_data))
-                                st.image(image, width=400)
-                            except:
-                                st.error(f"Erreur d'affichage : {esp}")
-                    if not photo_trouvee:
-                        st.write("Aucune photo disponible pour les espaces.")
+                        has_photo_esp = f"{esp}_Photo" in row and not pd.isna(row.get(f"{esp}_Photo")) and str(row.get(f"{esp}_Photo")).strip() != ""
+                        espaces_data.append({
+                            "Espace": esp,
+                            "État": row.get(f"{esp}_Etat", "N/A"),
+                            "Observations": "Aucune" if pd.isna(row.get(f"{esp}_Observations")) or str(row.get(f"{esp}_Observations")).strip().lower() == "nan" or str(row.get(f"{esp}_Observations")).strip() == "" else row.get(f"{esp}_Observations"),
+                            "Intervention": "Aucune" if pd.isna(row.get(f"{esp}_Intervention")) or str(row.get(f"{esp}_Intervention")).strip().lower() == "nan" or str(row.get(f"{esp}_Intervention")).strip() == "" else row.get(f"{esp}_Intervention"),
+                            "Photo": "📸 Oui" if has_photo_esp else "Non"
+                        })
+                    st.table(pd.DataFrame(espaces_data))
+                    
+                    with st.expander("🖼️ Visualiser les photos des espaces communs"):
+                        photo_trouvee = False
+                        for esp in espaces:
+                            img_b64 = row.get(f"{esp}_Photo")
+                            if not pd.isna(img_b64) and str(img_b64).strip() != "":
+                                photo_trouvee = True
+                                try:
+                                    st.write(f"**Espace : {esp} ({row.get(f'{esp}_Etat')})**")
+                                    img_data = base64.b64decode(img_b64)
+                                    image = Image.open(BytesIO(img_data))
+                                    st.image(image, width=400)
+                                except:
+                                    st.error(f"Erreur d'affichage : {esp}")
+                        if not photo_trouvee:
+                            st.write("Aucune photo disponible pour les espaces.")
+                    st.markdown("---")
                 
                 st.subheader("🚨 Réclamations Clients")
                 liste_rec = safe_load_json(row.get('Reclamations_Detail', '[]'))
