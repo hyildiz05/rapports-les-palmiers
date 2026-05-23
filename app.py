@@ -142,24 +142,36 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
     
     pdf.cell(110, 6, clean_txt("Incidents techniques"), border=1)
     pdf.cell(55, 6, clean_txt(str(int(row.get('Incidents_Techniques', 0)))), border=1, ln=True, align="C")
+    pdf.ln(8)
     
-    # --- ESPACE APRES INCIDENTS : LES DETAILS DE LA PISCINE ---
+    # --- 3. RÉSERVATIONS PISCINE (NOUVELLE SECTION SÉPARÉE) ---
+    pdf.set_font("Helvetica", "B", 13)
+    pdf.set_text_color(*c_titre)
+    pdf.cell(0, 8, clean_txt("RÉSERVATIONS PISCINE"), ln=True)
+    pdf.ln(1)
+    
     p_eat = int(row.get('Piscine_Eatnow', 0))
     p_bed = int(row.get('Piscine_Mysonbed', 0))
     p_mfy = int(row.get('Piscine_MarrakechForYou', 0))
     p_dir = int(row.get('Piscine_Direct', 0))
     p_tot = p_eat + p_bed + p_mfy + p_dir
     
-    pdf.cell(110, 6, clean_txt("Réservations Piscine - Eatnow"), border=1)
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.set_fill_color(*c_gris_clair)
+    pdf.cell(110, 7, clean_txt("Provenance"), border=1, fill=True)
+    pdf.cell(55, 7, clean_txt("Nombre"), border=1, ln=True, align="C")
+    
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(110, 6, clean_txt("Eatnow"), border=1)
     pdf.cell(55, 6, clean_txt(str(p_eat)), border=1, ln=True, align="C")
     
-    pdf.cell(110, 6, clean_txt("Réservations Piscine - Mysonbed"), border=1)
+    pdf.cell(110, 6, clean_txt("Mysonbed"), border=1)
     pdf.cell(55, 6, clean_txt(str(p_bed)), border=1, ln=True, align="C")
     
-    pdf.cell(110, 6, clean_txt("Réservations Piscine - Marrakech For You"), border=1)
+    pdf.cell(110, 6, clean_txt("Marrakech For You"), border=1)
     pdf.cell(55, 6, clean_txt(str(p_mfy)), border=1, ln=True, align="C")
     
-    pdf.cell(110, 6, clean_txt("Réservations Piscine - Direct"), border=1)
+    pdf.cell(110, 6, clean_txt("Direct (Tél / Accueil)"), border=1)
     pdf.cell(55, 6, clean_txt(str(p_dir)), border=1, ln=True, align="C")
     
     pdf.set_font("Helvetica", "B", 10)
@@ -169,7 +181,7 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
     
     pdf.ln(8)
     
-    # --- 3. SUIVI DES ESPACES ---
+    # --- 4. SUIVI DES ESPACES ---
     pdf.set_font("Helvetica", "B", 13)
     pdf.set_text_color(*c_titre)
     pdf.cell(0, 8, clean_txt("SUIVI DES ESPACES"), ln=True)
@@ -204,7 +216,7 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
         
     pdf.ln(8)
     
-    # --- 4. RÉCLAMATIONS CLIENTS ---
+    # --- 5. RÉCLAMATIONS CLIENTS ---
     pdf.set_font("Helvetica", "B", 13)
     pdf.set_text_color(*c_titre)
     pdf.cell(0, 8, clean_txt("RÉCLAMATIONS CLIENTS"), ln=True)
@@ -230,7 +242,7 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
         
     pdf.ln(8)
     
-    # --- 5. PRIORITÉS TRANSMISES ---
+    # --- 6. PRIORITÉS TRANSMISES ---
     pdf.set_font("Helvetica", "B", 13)
     pdf.set_text_color(*c_titre)
     if shift == "MATIN":
@@ -254,7 +266,7 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
         
     pdf.ln(8)
     
-    # --- 6. NOTES MANAGER & SIGNATURE ---
+    # --- 7. NOTES MANAGER & SIGNATURE ---
     pdf.set_font("Helvetica", "B", 13)
     pdf.set_text_color(*c_titre)
     pdf.cell(0, 8, clean_txt("NOTES MANAGER"), ln=True)
@@ -313,6 +325,7 @@ if page == "✍️ Saisir un Rapport":
     # ------------------------------------------
     if shift == "☀️ Shift MATIN":
         st.header(f"☀️ Morning Shift Manager Report — {date_selectionnee.strftime('%d/%m/%Y')}")
+        
         st.subheader("Opérations du Jour")
         col1, col2 = st.columns(2)
         with col1:
@@ -323,7 +336,8 @@ if page == "✍️ Saisir un Rapport":
             vip = st.number_input("Chambres VIP", min_value=0, value=0, key="m_vip_input")
             incidents = st.number_input("Incidents techniques", min_value=0, value=0, key="m_inc_input")
             
-        st.markdown("#### Réservations Piscine (Provenance)")
+        st.markdown("---")
+        st.subheader("🏖️ Réservations Piscine")
         cp1, cp2, cp3, cp4 = st.columns(4)
         with cp1:
             m_piscine_eat = st.number_input("Eatnow", min_value=0, value=0, key="m_p_eat")
@@ -458,7 +472,7 @@ if page == "✍️ Saisir un Rapport":
                 pass
         
         st.markdown("---")
-        st.subheader("RÉSUMÉ DU SOIR")
+        st.subheader("Opérations du Jour")
         col1, col2 = st.columns(2)
         with col1:
             s_chambres_occ = st.number_input("Chambres occupées", min_value=0, value=0, key="s_occ")
@@ -468,7 +482,8 @@ if page == "✍️ Saisir un Rapport":
             s_vip = st.number_input("Chambres VIP", min_value=0, value=0, key="s_vip")
             s_incidents = st.number_input("Incidents techniques", min_value=0, value=0, key="s_inc")
             
-        st.markdown("#### Réservations Piscine (Provenance)")
+        st.markdown("---")
+        st.subheader("🏖️ Réservations Piscine")
         cps1, cps2, cps3, cps4 = st.columns(4)
         with cps1:
             s_piscine_eat = st.number_input("Eatnow", min_value=0, value=0, key="s_p_eat")
@@ -602,7 +617,7 @@ if page == "✍️ Saisir un Rapport":
                 pass
         
         st.markdown("---")
-        st.subheader("RÉSUMÉ DE LA NUIT")
+        st.subheader("Opérations du Jour")
         col1, col2 = st.columns(2)
         with col1:
             n_chambres_occ = st.number_input("Chambres occupées", min_value=0, value=0, key="n_occ")
@@ -612,7 +627,8 @@ if page == "✍️ Saisir un Rapport":
             n_vip = st.number_input("Chambres VIP", min_value=0, value=0, key="n_vip")
             n_incidents = st.number_input("Incidents techniques", min_value=0, value=0, key="n_inc")
             
-        st.markdown("#### Réservations Piscine (Provenance)")
+        st.markdown("---")
+        st.subheader("🏖️ Réservations Piscine")
         cpn1, cpn2, cpn3, cpn4 = st.columns(4)
         with cpn1:
             n_piscine_eat = st.number_input("Eatnow", min_value=0, value=0, key="n_p_eat")
@@ -756,7 +772,7 @@ elif page == "📋 Consulter les Rapports":
                 st.success(f"### 📄 Fiche trouvée : {date_fr} — Shift {shift_choisi}")
                 row = rapport_selectionne.iloc[0]
                 
-                # Génération du PDF
+                # Génération du PDF (avec la nouvelle structure ordonnée)
                 pdf_data = generer_pdf(row, date_fr, shift_choisi, espaces)
                 
                 st.download_button(
@@ -770,13 +786,7 @@ elif page == "📋 Consulter les Rapports":
                 st.markdown("---")
                 st.subheader("📊 Résumé des Opérations")
                 
-                # Calcul des stats piscine pour la consultation
-                p_eat = int(row.get('Piscine_Eatnow', 0))
-                p_bed = int(row.get('Piscine_Mysonbed', 0))
-                p_mfy = int(row.get('Piscine_MarrakechForYou', 0))
-                p_dir = int(row.get('Piscine_Direct', 0))
-                total_piscine = p_eat + p_bed + p_mfy + p_dir
-                
+                # 1. Affichage des opérations du jour
                 if shift_choisi == "MATIN":
                     c1, c2, c3, c4, c5 = st.columns(5)
                     c1.metric("Chambres Occ.", int(row.get('Chambres_Occupees', 0)))
@@ -784,7 +794,7 @@ elif page == "📋 Consulter les Rapports":
                     c3.metric("Arrivées Prév.", int(row.get('Arrivees_Prevues', 0)))
                     c4.metric("Départs Prév.", int(row.get('Departs_Prevus', 0)))
                     c5.metric("Incidents Tech.", int(row.get('Incidents_Techniques', 0)))
-                else:  # SOIR et NUIT partagent les mêmes indicateurs
+                else:
                     c1, c2, c3, c4, c5 = st.columns(5)
                     c1.metric("Chambres Occ.", int(row.get('Chambres_Occupees', 0)))
                     c2.metric("Chambres VIP", int(row.get('VIP', 0)))
@@ -792,8 +802,16 @@ elif page == "📋 Consulter les Rapports":
                     c4.metric("Départs Tard.", int(row.get('Departs_Tardifs', 0)))
                     c5.metric("Incidents Tech.", int(row.get('Incidents_Techniques', 0)))
                 
-                # Affichage des statistiques de provenance de la Piscine (4 colonnes)
-                st.markdown(f"#### Détail des réservations Piscine (Total : {total_piscine})")
+                st.markdown("---")
+                
+                # 2. Section séparée Réservations Piscine (Placée exactement ICI)
+                p_eat = int(row.get('Piscine_Eatnow', 0))
+                p_bed = int(row.get('Piscine_Mysonbed', 0))
+                p_mfy = int(row.get('Piscine_MarrakechForYou', 0))
+                p_dir = int(row.get('Piscine_Direct', 0))
+                total_piscine = p_eat + p_bed + p_mfy + p_dir
+                
+                st.subheader(f"🏖️ Réservations Piscine (Total : {total_piscine})")
                 cp_aff1, cp_aff2, cp_aff3, cp_aff4 = st.columns(4)
                 cp_aff1.metric("Eatnow", p_eat)
                 cp_aff2.metric("Mysonbed", p_bed)
@@ -801,6 +819,8 @@ elif page == "📋 Consulter les Rapports":
                 cp_aff4.metric("Direct", p_dir)
                 
                 st.markdown("---")
+                
+                # 3. Suivi des espaces
                 st.subheader("🔍 Suivi de l'état des espaces")
                 espaces_data = []
                 for esp in espaces:
