@@ -233,7 +233,13 @@ def generer_pdf(row, date_texte, shift, espaces_liste):
     # --- 5. PRIORITÉS TRANSMISES ---
     pdf.set_font("Helvetica", "B", 13)
     pdf.set_text_color(*c_titre)
-    titre_prio = "PRIORITÉS POUR LE SHIFT SOIR" if shift == "MATIN" else "PRIORITÉS POUR LA NUIT"
+    if shift == "MATIN":
+        titre_prio = "PRIORITÉS POUR LE SHIFT SOIR"
+    elif shift == "SOIR":
+        titre_prio = "PRIORITÉS POUR LA NUIT"
+    else:
+        titre_prio = "PRIORITÉS POUR LE LENDEMAIN MATIN"
+        
     pdf.cell(0, 8, clean_txt(titre_prio), ln=True)
     pdf.ln(1)
     
@@ -280,10 +286,14 @@ if 'reclamations_matin' not in st.session_state:
     st.session_state.reclamations_matin = []
 if 'reclamations_soir' not in st.session_state:
     st.session_state.reclamations_soir = []
+if 'reclamations_nuit' not in st.session_state:
+    st.session_state.reclamations_nuit = []
 if 'priorites_matin' not in st.session_state:
     st.session_state.priorites_matin = []
 if 'priorites_soir' not in st.session_state:
     st.session_state.priorites_soir = []
+if 'priorites_nuit' not in st.session_state:
+    st.session_state.priorites_nuit = []
 
 espaces = [
     "Entrée / Réception", "Piscine 1", "Piscine 2", "Restaurant", 
@@ -294,10 +304,13 @@ espaces = [
 # PAGE 1 : SAISIR UN RAPPORT
 # ==========================================
 if page == "✍️ Saisir un Rapport":
-    shift = st.sidebar.radio("Sélectionnez le Shift", ["☀️ Shift MATIN", "🌙 Shift SOIR"])
+    shift = st.sidebar.radio("Sélectionnez le Shift", ["☀️ Shift MATIN", "🌙 Shift SOIR", "🌌 Shift NUIT"])
     date_selectionnee = st.sidebar.date_input("📅 Date du Rapport", value=datetime.now().date())
     date_rapport_str = date_selectionnee.strftime("%Y-%m-%d")
 
+    # ------------------------------------------
+    # SHIFT MATIN
+    # ------------------------------------------
     if shift == "☀️ Shift MATIN":
         st.header(f"☀️ Morning Shift Manager Report — {date_selectionnee.strftime('%d/%m/%Y')}")
         st.subheader("Opérations du Jour")
@@ -422,6 +435,9 @@ if page == "✍️ Saisir un Rapport":
             st.session_state.priorites_matin = []
             st.rerun()
 
+    # ------------------------------------------
+    # SHIFT SOIR
+    # ------------------------------------------
     elif shift == "🌙 Shift SOIR":
         st.header(f"🌙 Evening Shift Manager Report — {date_selectionnee.strftime('%d/%m/%Y')}")
         if os.path.exists(DB_FILE):
@@ -563,6 +579,150 @@ if page == "✍️ Saisir un Rapport":
             st.session_state.priorites_soir = []
             st.rerun()
 
+    # ------------------------------------------
+    # SHIFT NUIT
+    # ------------------------------------------
+    elif shift == "🌌 Shift NUIT":
+        st.header(f"🌌 Night Shift Manager Report — {date_selectionnee.strftime('%d/%m/%Y')}")
+        if os.path.exists(DB_FILE):
+            try:
+                df = pd.read_csv(DB_FILE)
+                rapport_soir = df[(df['Date'] == date_rapport_str) & (df['Shift'] == 'SOIR')]
+                if not rapport_soir.empty:
+                    st.warning("⚠️ **Rappel du Shift SOIR :**")
+                    st.write(f"• Incidents techniques ce soir : {rapport_soir['Incidents_Techniques'].values[0]}")
+                    
+                    prio_s_aff = safe_load_json(rapport_soir['Priorites_Liste'].values[0])
+                    if prio_s_aff:
+                        for idx, p in enumerate(prio_s_aff, 1):
+                            st.write(f"   {idx}. {p}")
+                    else:
+                        st.write("• Aucune priorité transmise.")
+            except:
+                pass
+        
+        st.markdown("---")
+        st.subheader("RÉSUMÉ DE LA NUIT")
+        col1, col2 = st.columns(2)
+        with col1:
+            n_chambres_occ = st.number_input("Chambres occupées", min_value=0, value=0, key="n_occ")
+            n_late_check = st.number_input("Late Check-in", min_value=0, value=0, key="n_late")
+            n_departs_tardifs = st.number_input("Départs tardifs", min_value=0, value=0, key="n_dep_t")
+        with col2:
+            n_vip = st.number_input("Chambres VIP", min_value=0, value=0, key="n_vip")
+            n_incidents = st.number_input("Incidents techniques", min_value=0, value=0, key="n_inc")
+            
+        st.markdown("#### Réservations Piscine (Provenance)")
+        cpn1, cpn2, cpn3, cpn4 = st.columns(4)
+        with cpn1:
+            n_piscine_eat = st.number_input("Eatnow", min_value=0, value=0, key="n_p_eat")
+        with cpn2:
+            n_piscine_bed = st.number_input("Mysonbed", min_value=0, value=0, key="n_p_bed")
+        with cpn3:
+            n_piscine_mfy = st.number_input("Marrakech For You", min_value=0, value=0, key="n_p_mfy")
+        with cpn4:
+            n_piscine_dir = st.number_input("Direct (Tél / Accueil)", min_value=0, value=0, key="n_p_dir")
+
+        st.markdown("---")
+        st.subheader("SUIVI DES ESPACES")
+        etat_espaces_nuit = {}
+        for espace in espaces:
+            st.write(f"**{espace}**")
+            c1, c2, c3 = st.columns([1.2, 2.4, 2.4])
+            with c1:
+                etat = st.selectbox("État", ["OK", "Alerte"], key=f"nuit_etat_{espace}")
+            with c2:
+                obs = st.text_input("Observations", placeholder="RAS", key=f"nuit_obs_{espace}")
+            with c3:
+                interv = st.text_input("Intervention nécessaire", placeholder="Aucune", key=f"nuit_int_{espace}")
+            
+            photo_espace = st.file_uploader("📷 Photo de l'espace (Optionnel)", type=["jpg", "jpeg", "png"], key=f"nuit_photo_{espace}")
+            
+            etat_espaces_nuit[f"{espace}_Etat"] = etat
+            etat_espaces_nuit[f"{espace}_Observations"] = obs if obs.strip() != "" else "Aucune"
+            etat_espaces_nuit[f"{espace}_Intervention"] = interv if interv.strip() != "" else "Aucune"
+            etat_espaces_nuit[f"{espace}_Photo"] = image_to_base64(photo_espace)
+            
+            st.markdown("<hr style='margin:0.5em 0px;', size='1'>", unsafe_allow_html=True)
+
+        st.markdown("---")
+        st.subheader("RÉCLAMATIONS CLIENTS")
+        with st.form("form_rec_nuit", clear_on_submit=True):
+            rc1, rc2, rc3, rc4 = st.columns([1, 1.5, 2.5, 2.5])
+            rn_heure = rc1.text_input("Heure", placeholder="02h30")
+            rn_chambre = rc2.text_input("Chambre / Client", placeholder="Ch 5")
+            rn_sujet = rc3.text_input("Sujet", placeholder="Bruit couloir")
+            rn_action = rc4.text_input("Action prise", placeholder="Ronde effectuée, calme rétabli")
+            rn_photo = st.file_uploader("📷 Ajouter une photo d'illustration (Optionnel)", type=["jpg", "jpeg", "png"], key="photo_rec_n")
+            submit_rec_n = st.form_submit_button("➕ Ajouter la réclamation (Nuit)", use_container_width=True)
+            
+            if submit_rec_n:
+                if rn_chambre or rn_sujet:
+                    base64_img = image_to_base64(rn_photo)
+                    st.session_state.reclamations_nuit.append({
+                        "Heure": rn_heure if rn_heure else "--h--", 
+                        "Chambre": rn_chambre if rn_chambre else "Inconnu", 
+                        "Sujet": rn_sujet if rn_sujet else "Non spécifié", 
+                        "Action": rn_action if rn_action else "Aucune",
+                        "Photo": base64_img
+                    })
+                st.rerun()
+        
+        if st.session_state.reclamations_nuit:
+            df_n_aff = pd.DataFrame(st.session_state.reclamations_nuit)
+            if "Photo" in df_n_aff.columns:
+                df_n_aff["Photo"] = df_n_aff["Photo"].apply(lambda x: "📸 Oui" if x else "Non")
+            st.table(df_n_aff)
+            if st.button("❌ Effacer la liste des réclamations (Nuit)", key="btn_del_rn"):
+                st.session_state.reclamations_nuit = []
+                st.rerun()
+
+        st.markdown("---")
+        st.subheader("PRIORITÉS POUR LE LENDEMAIN MATIN")
+        with st.form("form_prio_nuit", clear_on_submit=True):
+            nouvelle_prio_n = st.text_input("Rédiger une priorité pour le matin...", placeholder="Ex: Réveiller la chambre 102 à 7h...")
+            submit_prio_n = st.form_submit_button("➕ Ajouter cette priorité", use_container_width=True)
+            
+            if submit_prio_n and nouvelle_prio_n:
+                st.session_state.priorites_nuit.append(nouvelle_prio_n)
+                st.rerun()
+                
+        if st.session_state.priorites_nuit:
+            for i, prio in enumerate(st.session_state.priorites_nuit, 1):
+                st.write(f"**{i}.** {prio}")
+            if st.button("❌ Effacer les priorités (Nuit)", key="btn_del_prio_n"):
+                st.session_state.priorites_nuit = []
+                st.rerun()
+
+        st.markdown("---")
+        st.subheader("NOTES MANAGER")
+        notes_manager_nuit = st.text_area("Observations générales de la nuit", placeholder="Saisir vos notes ici...", key="nn_text")
+
+        if st.button("💾 Enregistrer le Rapport Nuit", use_container_width=True, key="btn_save_nuit"):
+            donnees_nuit = {
+                "Date": date_rapport_str,
+                "Shift": "NUIT",
+                "Chambres_Occupees": n_chambres_occ,
+                "Late_Check_In": n_late_check,
+                "Departs_Tardifs": n_departs_tardifs,
+                "VIP": n_vip,
+                "Incidents_Techniques": n_incidents,
+                "Piscine_Eatnow": n_piscine_eat,
+                "Piscine_Mysonbed": n_piscine_bed,
+                "Piscine_MarrakechForYou": n_piscine_mfy,
+                "Piscine_Direct": n_piscine_dir,
+                "Priorites_Liste": json.dumps(st.session_state.priorites_nuit),
+                "Notes_Manager": notes_manager_nuit if notes_manager_nuit.strip() != "" else "Aucune",
+                "Reclamations_Detail": json.dumps(st.session_state.reclamations_nuit)
+            }
+            donnees_nuit.update(etat_espaces_nuit)
+            sauvegarder_rapport(donnees_nuit)
+            st.success("🎉 Le rapport de la nuit a été enregistré / mis à jour avec succès !")
+            
+            st.session_state.reclamations_nuit = []
+            st.session_state.priorites_nuit = []
+            st.rerun()
+
 # ==========================================
 # PAGE 2 : CONSULTATION ET FILTRAGE AMÉLIORÉ
 # ==========================================
@@ -576,7 +736,7 @@ elif page == "📋 Consulter les Rapports":
         date_fr = date_selectionnee_dt.strftime("%d/%m/%Y")
     
     with c_shift:
-        shift_choisi = st.selectbox("⏰ Choisir le Shift", ["MATIN", "SOIR"])
+        shift_choisi = st.selectbox("⏰ Choisir le Shift", ["MATIN", "SOIR", "NUIT"])
         
     st.markdown("---")
     
@@ -624,7 +784,7 @@ elif page == "📋 Consulter les Rapports":
                     c3.metric("Arrivées Prév.", int(row.get('Arrivees_Prevues', 0)))
                     c4.metric("Départs Prév.", int(row.get('Departs_Prevus', 0)))
                     c5.metric("Incidents Tech.", int(row.get('Incidents_Techniques', 0)))
-                elif shift_choisi == "SOIR":
+                else:  # SOIR et NUIT partagent les mêmes indicateurs
                     c1, c2, c3, c4, c5 = st.columns(5)
                     c1.metric("Chambres Occ.", int(row.get('Chambres_Occupees', 0)))
                     c2.metric("Chambres VIP", int(row.get('VIP', 0)))
